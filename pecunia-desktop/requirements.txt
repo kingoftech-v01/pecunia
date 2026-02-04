@@ -1,0 +1,45 @@
+# GUI Framework
+PyQt6>=6.6
+PyQt6-Charts>=6.6
+PyQtGraph>=0.13
+
+# HTTP Client
+aiohttp>=3.9
+httpx>=0.26
+
+# Database
+SQLAlchemy>=2.0
+aiosqlite>=0.19
+
+# Security
+keyring>=24.3
+cryptography>=42.0
+
+# Data Processing
+pandas>=2.1
+python-dateutil>=2.8
+
+# Async
+asyncio>=3.4
+
+# Configuration
+python-dotenv>=1.0
+pydantic>=2.5
+pydantic-settings>=2.1
+
+# Export
+reportlab>=4.0
+openpyxl>=3.1
+
+# Notifications
+plyer>=2.1
+
+# Build
+PyInstaller>=6.3
+
+# Development
+pytest>=8.0
+pytest-asyncio>=0.23
+pytest-qt>=4.3
+black>=24.1
+mypy>=1.8

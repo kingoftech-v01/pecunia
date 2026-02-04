@@ -1,0 +1,489 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Manage Subscription - Pecunia{% endblock %}
+
+{% block extra_css %}
+<style>
+    .plan-card {
+        transition: all 0.3s ease;
+    }
+    .plan-card:hover {
+        transform: translateY(-2px);
+    }
+    .plan-card.current {
+        border: 2px solid #0ea5e9;
+        position: relative;
+    }
+    .plan-card.current::before {
+        content: 'Current Plan';
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #0ea5e9;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .usage-bar {
+        transition: width 0.5s ease-out;
+    }
+    .danger-zone {
+        border: 1px solid #fecaca;
+        background: linear-gradient(135deg, #fef2f2 0%, #fff 100%);
+    }
+    .dark .danger-zone {
+        border-color: #7f1d1d;
+        background: linear-gradient(135deg, rgba(127, 29, 29, 0.2) 0%, rgba(17, 24, 39, 1) 100%);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="manageSubscriptionApp()" class="max-w-5xl mx-auto">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Manage Subscription</h1>
+        <p class="mt-1 text-gray-500 dark:text-gray-400">
+            View and manage your subscription, usage, and billing preferences.
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Current Plan Card -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Current Plan</h2>
+                        {% if subscription and subscription.is_active %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                                     {% if subscription.status == 'active' %}bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400
+                                     {% elif subscription.status == 'trialing' %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400
+                                     {% elif subscription.status == 'past_due' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400
+                                     {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400{% endif %}">
+                            {% if subscription.cancel_at_period_end %}
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Canceling
+                            {% else %}
+                            {{ subscription.get_status_display }}
+                            {% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if subscription %}
+                <div class="p-6">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-16 h-16 bg-gradient-to-br from-primary-400 to-primary-600 rounded-2xl flex items-center justify-center">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-2xl font-bold text-gray-900 dark:text-white">{{ subscription.plan.name }}</h3>
+                            <p class="text-gray-500 dark:text-gray-400">{{ subscription.plan.description }}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-3xl font-bold text-gray-900 dark:text-white">
+                                {% if subscription.billing_interval == 'year' %}
+                                {{ subscription.plan.price_yearly }}&euro;
+                                {% else %}
+                                {{ subscription.plan.price_monthly }}&euro;
+                                {% endif %}
+                            </div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">
+                                /{{ subscription.billing_interval }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Billing Info -->
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Billing Cycle</p>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white mt-1">
+                                {{ subscription.get_billing_interval_display }}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Next Billing</p>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white mt-1">
+                                {% if subscription.current_period_end %}
+                                {{ subscription.current_period_end|date:"M d, Y" }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Days Remaining</p>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white mt-1">
+                                {{ subscription.days_until_renewal|default:"-" }} days
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Cancellation Notice -->
+                    {% if subscription.cancel_at_period_end %}
+                    <div class="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                                    Your subscription will be canceled on {{ subscription.current_period_end|date:"M d, Y" }}
+                                </p>
+                                <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                                    You'll continue to have access until then. Changed your mind?
+                                </p>
+                                <a href="{% url 'frontend:subscriptions:reactivate' %}"
+                                   class="inline-flex items-center mt-2 text-sm font-medium text-yellow-800 dark:text-yellow-200 hover:underline">
+                                    Reactivate subscription
+                                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="p-8 text-center">
+                    <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No Active Subscription</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-4">Choose a plan to unlock premium features.</p>
+                    <a href="{% url 'frontend:subscriptions:pricing' %}"
+                       class="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
+                        View Plans
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Usage Stats -->
+            {% if subscription %}
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Usage This Month</h2>
+                </div>
+                <div class="p-6 space-y-6">
+                    <!-- Bank Accounts -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Bank Accounts</span>
+                            <span class="text-sm text-gray-500 dark:text-gray-400">
+                                <span class="font-semibold text-gray-900 dark:text-white">{{ usage.bank_accounts|default:0 }}</span>
+                                /
+                                {% if subscription.plan.max_bank_accounts == -1 %}Unlimited{% else %}{{ subscription.plan.max_bank_accounts }}{% endif %}
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            {% if subscription.plan.max_bank_accounts != -1 %}
+                            <div class="usage-bar bg-primary-500 h-2 rounded-full"
+                                 style="width: {% widthratio usage.bank_accounts|default:0 subscription.plan.max_bank_accounts 100 %}%"></div>
+                            {% else %}
+                            <div class="usage-bar bg-primary-500 h-2 rounded-full" style="width: 20%"></div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Budgets -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Budgets</span>
+                            <span class="text-sm text-gray-500 dark:text-gray-400">
+                                <span class="font-semibold text-gray-900 dark:text-white">{{ usage.budgets|default:0 }}</span>
+                                /
+                                {% if subscription.plan.max_budgets == -1 %}Unlimited{% else %}{{ subscription.plan.max_budgets }}{% endif %}
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            {% if subscription.plan.max_budgets != -1 %}
+                            <div class="usage-bar bg-green-500 h-2 rounded-full"
+                                 style="width: {% widthratio usage.budgets|default:0 subscription.plan.max_budgets 100 %}%"></div>
+                            {% else %}
+                            <div class="usage-bar bg-green-500 h-2 rounded-full" style="width: 30%"></div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Transactions -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Transactions</span>
+                            <span class="text-sm text-gray-500 dark:text-gray-400">
+                                <span class="font-semibold text-gray-900 dark:text-white">{{ usage.transactions|default:0 }}</span>
+                                /
+                                {% if subscription.plan.max_transactions_per_month == -1 %}Unlimited{% else %}{{ subscription.plan.max_transactions_per_month }}{% endif %}
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            {% if subscription.plan.max_transactions_per_month != -1 %}
+                            <div class="usage-bar bg-orange-500 h-2 rounded-full"
+                                 style="width: {% widthratio usage.transactions|default:0 subscription.plan.max_transactions_per_month 100 %}%"></div>
+                            {% else %}
+                            <div class="usage-bar bg-orange-500 h-2 rounded-full" style="width: 45%"></div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Categories -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Custom Categories</span>
+                            <span class="text-sm text-gray-500 dark:text-gray-400">
+                                <span class="font-semibold text-gray-900 dark:text-white">{{ usage.categories|default:0 }}</span>
+                                /
+                                {% if subscription.plan.max_categories == -1 %}Unlimited{% else %}{{ subscription.plan.max_categories }}{% endif %}
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            {% if subscription.plan.max_categories != -1 %}
+                            <div class="usage-bar bg-purple-500 h-2 rounded-full"
+                                 style="width: {% widthratio usage.categories|default:0 subscription.plan.max_categories 100 %}%"></div>
+                            {% else %}
+                            <div class="usage-bar bg-purple-500 h-2 rounded-full" style="width: 25%"></div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upgrade/Downgrade Options -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Change Plan</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Upgrade or downgrade your subscription anytime.</p>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for plan in plans %}
+                        {% if plan.id != subscription.plan.id %}
+                        <div class="plan-card p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-primary-300 dark:hover:border-primary-700 cursor-pointer">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-900 dark:text-white">{{ plan.name }}</h3>
+                                {% if plan.display_order > subscription.plan.display_order %}
+                                <span class="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">Upgrade</span>
+                                {% else %}
+                                <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-medium rounded-full">Downgrade</span>
+                                {% endif %}
+                            </div>
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                                {{ plan.price_monthly }}&euro;<span class="text-sm font-normal text-gray-500">/month</span>
+                            </div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ plan.description }}</p>
+                            <a href="{% url 'frontend:subscriptions:change-plan' %}?plan={{ plan.id }}"
+                               class="block w-full text-center py-2 px-4 border border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400 font-medium rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                                {% if plan.display_order > subscription.plan.display_order %}Upgrade{% else %}Switch{% endif %} to {{ plan.name }}
+                            </a>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <div class="mt-4 text-center">
+                        <a href="{% url 'frontend:subscriptions:pricing' %}"
+                           class="text-sm text-primary-600 dark:text-primary-400 hover:underline">
+                            View full plan comparison
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone - Cancel Subscription -->
+            {% if subscription.is_active and not subscription.cancel_at_period_end %}
+            <div class="danger-zone rounded-2xl overflow-hidden">
+                <div class="p-6 border-b border-red-200 dark:border-red-900">
+                    <h2 class="text-lg font-semibold text-red-700 dark:text-red-400">Danger Zone</h2>
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-medium text-gray-900 dark:text-white">Cancel Subscription</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                Cancel your subscription at the end of the current billing period.
+                            </p>
+                        </div>
+                        <a href="{% url 'frontend:subscriptions:cancel-subscription' %}"
+                           class="px-4 py-2 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 font-medium rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                            Cancel Plan
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Quick Actions -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="p-4 border-b border-gray-100 dark:border-gray-700">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Quick Actions</h3>
+                </div>
+                <div class="p-2">
+                    <a href="{% url 'frontend:subscriptions:billing' %}"
+                       class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Billing History</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">View invoices & payments</p>
+                        </div>
+                    </a>
+
+                    <a href="{% url 'frontend:subscriptions:billing-portal' %}"
+                       class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Payment Methods</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Manage cards & billing</p>
+                        </div>
+                    </a>
+
+                    <a href="{% url 'frontend:subscriptions:support' %}"
+                       class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Contact Support</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Get help with billing</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Plan Features -->
+            {% if subscription %}
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="p-4 border-b border-gray-100 dark:border-gray-700">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Your Features</h3>
+                </div>
+                <div class="p-4">
+                    <ul class="space-y-3">
+                        {% if subscription.plan.ai_categorization %}
+                        <li class="flex items-center text-sm">
+                            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            <span class="text-gray-700 dark:text-gray-300">AI Categorization</span>
+                        </li>
+                        {% endif %}
+                        {% if subscription.plan.ai_insights %}
+                        <li class="flex items-center text-sm">
+                            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            <span class="text-gray-700 dark:text-gray-300">AI Insights</span>
+                        </li>
+                        {% endif %}
+                        {% if subscription.plan.bank_sync %}
+                        <li class="flex items-center text-sm">
+                            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            <span class="text-gray-700 dark:text-gray-300">Bank Sync</span>
+                        </li>
+                        {% endif %}
+                        {% if subscription.plan.export_csv %}
+                        <li class="flex items-center text-sm">
+                            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            <span class="text-gray-700 dark:text-gray-300">CSV Export</span>
+                        </li>
+                        {% endif %}
+                        {% if subscription.plan.export_pdf %}
+                        <li class="flex items-center text-sm">
+                            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            <span class="text-gray-700 dark:text-gray-300">PDF Reports</span>
+                        </li>
+                        {% endif %}
+                        {% if subscription.plan.multi_currency %}
+                        <li class="flex items-center text-sm">
+                            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            <span class="text-gray-700 dark:text-gray-300">Multi-Currency</span>
+                        </li>
+                        {% endif %}
+                        {% if subscription.plan.priority_support %}
+                        <li class="flex items-center text-sm">
+                            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            <span class="text-gray-700 dark:text-gray-300">Priority Support</span>
+                        </li>
+                        {% endif %}
+                        {% if subscription.plan.api_access %}
+                        <li class="flex items-center text-sm">
+                            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            <span class="text-gray-700 dark:text-gray-300">API Access</span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Help Card -->
+            <div class="bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl p-6 text-white">
+                <svg class="w-10 h-10 text-primary-200 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <h3 class="font-semibold text-lg mb-2">Need Help?</h3>
+                <p class="text-primary-100 text-sm mb-4">
+                    Our support team is here to help you with any questions about your subscription.
+                </p>
+                <a href="{% url 'frontend:subscriptions:support' %}"
+                   class="inline-flex items-center text-sm font-medium text-white hover:underline">
+                    Contact Support
+                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function manageSubscriptionApp() {
+    return {
+        init() {
+            // Any initialization logic
+        }
+    }
+}
+</script>
+{% endblock %}

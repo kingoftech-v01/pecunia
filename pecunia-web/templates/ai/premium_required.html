@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Premium Feature - Pecunia{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body p-5">
+                    <!-- Premium Icon -->
+                    <div class="mb-4">
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center"
+                             style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <i class="bi bi-star-fill text-white fs-2"></i>
+                        </div>
+                    </div>
+
+                    <!-- Title -->
+                    <h2 class="mb-3">Premium Feature</h2>
+
+                    <!-- Feature Info -->
+                    <div class="bg-light rounded-3 p-4 mb-4">
+                        <h5 class="text-primary mb-2">
+                            <i class="bi bi-lock me-2"></i>{{ feature }}
+                        </h5>
+                        <p class="text-muted mb-0">{{ description }}</p>
+                    </div>
+
+                    <!-- Benefits List -->
+                    <div class="text-start mb-4">
+                        <h6 class="text-muted mb-3">What you get with Premium:</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                AI-powered financial recommendations
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                Smart transaction categorization
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                Personal AI finance assistant
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                Advanced insights and analytics
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                Spending predictions and forecasts
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- CTA Buttons -->
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'subscriptions:upgrade' %}" class="btn btn-primary btn-lg">
+                            <i class="bi bi-rocket-takeoff me-2"></i>Upgrade to Premium
+                        </a>
+                        <a href="{% url 'dashboard:home' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                    </div>
+
+                    <!-- Pricing Info -->
+                    <div class="mt-4 pt-4 border-top">
+                        <p class="text-muted small mb-0">
+                            Starting at <strong>$9.99/month</strong>. Cancel anytime.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

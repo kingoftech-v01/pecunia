@@ -1,0 +1,128 @@
+{% comment %}
+Balance Card Widget
+-------------------
+Displays total balance, monthly income/expenses, and trend indicators.
+Loaded via HTMX for lazy loading.
+{% endcomment %}
+
+<div class="p-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            Total Balance
+        </h3>
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+            {% if net_monthly >= 0 %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% else %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200{% endif %}">
+            {% if net_monthly >= 0 %}+{% endif %}${{ net_monthly|floatformat:2 }} this month
+        </span>
+    </div>
+
+    <!-- Total Balance -->
+    <div class="mb-6">
+        <span class="text-4xl font-bold text-gray-900 dark:text-white">
+            ${{ total_balance|floatformat:2|default:"0.00" }}
+        </span>
+    </div>
+
+    <!-- Income / Expenses Grid -->
+    <div class="grid grid-cols-2 gap-6">
+        <!-- Monthly Income -->
+        <div class="relative">
+            <div class="flex items-center mb-1">
+                <div class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/50 flex items-center justify-center mr-2">
+                    <svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"></path>
+                    </svg>
+                </div>
+                <span class="text-sm text-gray-500 dark:text-gray-400">Income</span>
+            </div>
+            <div class="flex items-end">
+                <span class="text-xl font-semibold text-gray-900 dark:text-white">
+                    ${{ monthly_income|floatformat:2|default:"0.00" }}
+                </span>
+                {% if income_trend != 'neutral' %}
+                <span class="ml-2 flex items-center text-sm
+                    {% if income_trend == 'up' %}text-green-600{% else %}text-red-600{% endif %}">
+                    {% if income_trend == 'up' %}
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+                    </svg>
+                    {% else %}
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                    </svg>
+                    {% endif %}
+                    {{ income_change|floatformat:0|default:"0" }}%
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Monthly Expenses -->
+        <div class="relative">
+            <div class="flex items-center mb-1">
+                <div class="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/50 flex items-center justify-center mr-2">
+                    <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"></path>
+                    </svg>
+                </div>
+                <span class="text-sm text-gray-500 dark:text-gray-400">Expenses</span>
+            </div>
+            <div class="flex items-end">
+                <span class="text-xl font-semibold text-gray-900 dark:text-white">
+                    ${{ monthly_expenses|floatformat:2|default:"0.00" }}
+                </span>
+                {% if expense_trend != 'neutral' %}
+                <span class="ml-2 flex items-center text-sm
+                    {% if expense_trend == 'up' %}text-red-600{% else %}text-green-600{% endif %}">
+                    {% if expense_trend == 'up' %}
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+                    </svg>
+                    {% else %}
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                    </svg>
+                    {% endif %}
+                    {{ expense_change|floatformat:0|default:"0" }}%
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Net Savings Bar -->
+    <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between text-sm mb-2">
+            <span class="text-gray-500 dark:text-gray-400">Net Savings</span>
+            <span class="font-medium {% if net_monthly >= 0 %}text-green-600 dark:text-green-400{% else %}text-red-600 dark:text-red-400{% endif %}">
+                {% if net_monthly >= 0 %}+{% endif %}${{ net_monthly|floatformat:2 }}
+            </span>
+        </div>
+        {% if monthly_income > 0 %}
+        {% widthratio monthly_expenses monthly_income 100 as expense_percentage %}
+        <div class="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div class="absolute inset-y-0 left-0 {% if expense_percentage > 100 %}bg-red-500{% elif expense_percentage > 80 %}bg-yellow-500{% else %}bg-green-500{% endif %} rounded-full transition-all duration-500"
+                 style="width: min({{ expense_percentage }}%, 100%)"></div>
+        </div>
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            {% if expense_percentage <= 100 %}
+                You're saving {{ 100|add:"-"|add:expense_percentage }}% of your income
+            {% else %}
+                You're spending more than you earn
+            {% endif %}
+        </p>
+        {% endif %}
+    </div>
+
+    <!-- Quick Link -->
+    <div class="mt-4">
+        <a href="{% url 'frontend:banking:accounts' %}"
+           class="inline-flex items-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
+            View all accounts
+            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+        </a>
+    </div>
+</div>

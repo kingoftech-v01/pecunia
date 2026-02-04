@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Manage Two-Factor Authentication - Pecunia{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-2xl">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">
+        Two-Factor Authentication
+    </h1>
+
+    {% if messages %}
+    <div class="mb-6 space-y-2">
+        {% for message in messages %}
+        <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-red-100 text-red-700 border border-red-200{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-700 border border-yellow-200{% elif message.tags == 'success' %}bg-green-100 text-green-700 border border-green-200{% else %}bg-blue-100 text-blue-700 border border-blue-200{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <!-- Status Header -->
+        <div class="p-6 {% if is_2fa_enabled %}bg-green-50 border-b border-green-100{% else %}bg-gray-50 border-b border-gray-100{% endif %}">
+            <div class="flex items-center">
+                {% if is_2fa_enabled %}
+                <div class="flex-shrink-0 h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <h2 class="text-lg font-semibold text-green-800">
+                        Two-Factor Authentication is Enabled
+                    </h2>
+                    <p class="text-sm text-green-600">
+                        Your account has an extra layer of security.
+                    </p>
+                </div>
+                {% else %}
+                <div class="flex-shrink-0 h-12 w-12 bg-gray-200 rounded-full flex items-center justify-center">
+                    <svg class="h-6 w-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <h2 class="text-lg font-semibold text-gray-800">
+                        Two-Factor Authentication is Disabled
+                    </h2>
+                    <p class="text-sm text-gray-600">
+                        Add an extra layer of security to your account.
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6">
+            {% if is_2fa_enabled %}
+            <!-- Enabled State -->
+            <div class="space-y-6">
+                <!-- Device Info -->
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                        <svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        </svg>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-900">{{ device.name }}</p>
+                            <p class="text-xs text-gray-500">
+                                Added {{ device.created_at|date:"M d, Y" }}
+                                {% if device.last_used_at %}
+                                | Last used {{ device.last_used_at|timesince }} ago
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Backup Codes Status -->
+                <div class="p-4 {% if should_regenerate_codes %}bg-yellow-50 border border-yellow-200{% else %}bg-gray-50{% endif %} rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-900">Backup Codes</h3>
+                            <p class="text-sm {% if should_regenerate_codes %}text-yellow-700{% else %}text-gray-600{% endif %}">
+                                {{ backup_codes_remaining }} codes remaining
+                                {% if should_regenerate_codes %}
+                                <span class="font-medium">- Consider generating new codes</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <form method="post" action="{% url 'accounts:regenerate_backup_codes' %}" id="regenerate-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="verification" id="regenerate-verification">
+                            <button type="button"
+                                    onclick="showRegenerateModal()"
+                                    class="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                Generate New Codes
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Trusted Devices -->
+                <div class="p-4 bg-gray-50 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-900">Trusted Devices</h3>
+                            <p class="text-sm text-gray-600">
+                                Devices that don't require 2FA verification
+                            </p>
+                        </div>
+                        <form method="post" action="{% url 'accounts:revoke_trusted_devices' %}">
+                            {% csrf_token %}
+                            <button type="submit"
+                                    class="px-4 py-2 text-sm text-red-600 hover:text-red-800 transition-colors">
+                                Revoke All
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Disable 2FA -->
+                <div class="pt-6 border-t border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-900 mb-2">Disable Two-Factor Authentication</h3>
+                    <p class="text-sm text-gray-600 mb-4">
+                        This will remove the extra security layer from your account. You'll need to enter
+                        your password to confirm.
+                    </p>
+                    <button type="button"
+                            onclick="showDisableModal()"
+                            class="px-4 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
+                        Disable 2FA
+                    </button>
+                </div>
+            </div>
+
+            {% else %}
+            <!-- Disabled State -->
+            <div class="text-center py-6">
+                <p class="text-gray-600 mb-6">
+                    Two-factor authentication adds an extra layer of security to your account.
+                    In addition to your password, you'll need to enter a code from your phone
+                    to sign in.
+                </p>
+
+                <div class="space-y-4 text-left max-w-md mx-auto mb-8">
+                    <div class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <p class="ml-3 text-sm text-gray-600">
+                            Protect against password theft
+                        </p>
+                    </div>
+                    <div class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <p class="ml-3 text-sm text-gray-600">
+                            Works with any authenticator app
+                        </p>
+                    </div>
+                    <div class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <p class="ml-3 text-sm text-gray-600">
+                            Backup codes for emergency access
+                        </p>
+                    </div>
+                </div>
+
+                <a href="{% url 'accounts:setup_2fa' %}"
+                   class="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+                    <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    Enable Two-Factor Authentication
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Disable 2FA Modal -->
+<div id="disable-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Disable Two-Factor Authentication</h3>
+        <p class="text-sm text-gray-600 mb-4">
+            Enter your password to confirm disabling 2FA.
+        </p>
+        <form method="post" action="{% url 'accounts:disable_2fa' %}">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label for="disable-password" class="block text-sm font-medium text-gray-700 mb-1">
+                    Password
+                </label>
+                <input type="password"
+                       name="password"
+                       id="disable-password"
+                       required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button type="button"
+                        onclick="hideDisableModal()"
+                        class="px-4 py-2 text-sm text-gray-700 hover:text-gray-900">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700">
+                    Disable 2FA
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Regenerate Codes Modal -->
+<div id="regenerate-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Generate New Backup Codes</h3>
+        <p class="text-sm text-gray-600 mb-4">
+            This will invalidate your existing backup codes. Enter your 2FA code or password to continue.
+        </p>
+        <div class="mb-4">
+            <label for="regenerate-input" class="block text-sm font-medium text-gray-700 mb-1">
+                2FA Code or Password
+            </label>
+            <input type="text"
+                   id="regenerate-input"
+                   placeholder="Enter code or password"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+        <div class="flex justify-end space-x-3">
+            <button type="button"
+                    onclick="hideRegenerateModal()"
+                    class="px-4 py-2 text-sm text-gray-700 hover:text-gray-900">
+                Cancel
+            </button>
+            <button type="button"
+                    onclick="submitRegenerate()"
+                    class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                Generate Codes
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function showDisableModal() {
+    document.getElementById('disable-modal').classList.remove('hidden');
+    document.getElementById('disable-modal').classList.add('flex');
+    document.getElementById('disable-password').focus();
+}
+
+function hideDisableModal() {
+    document.getElementById('disable-modal').classList.add('hidden');
+    document.getElementById('disable-modal').classList.remove('flex');
+}
+
+function showRegenerateModal() {
+    document.getElementById('regenerate-modal').classList.remove('hidden');
+    document.getElementById('regenerate-modal').classList.add('flex');
+    document.getElementById('regenerate-input').focus();
+}
+
+function hideRegenerateModal() {
+    document.getElementById('regenerate-modal').classList.add('hidden');
+    document.getElementById('regenerate-modal').classList.remove('flex');
+}
+
+function submitRegenerate() {
+    const value = document.getElementById('regenerate-input').value;
+    document.getElementById('regenerate-verification').value = value;
+    document.getElementById('regenerate-form').submit();
+}
+
+// Close modals on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideDisableModal();
+        hideRegenerateModal();
+    }
+});
+
+// Close modals on background click
+document.getElementById('disable-modal').addEventListener('click', function(e) {
+    if (e.target === this) hideDisableModal();
+});
+document.getElementById('regenerate-modal').addEventListener('click', function(e) {
+    if (e.target === this) hideRegenerateModal();
+});
+</script>
+{% endblock %}

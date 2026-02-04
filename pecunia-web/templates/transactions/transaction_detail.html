@@ -1,0 +1,781 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ transaction.description|truncatechars:30 }} - Pecunia{% endblock %}
+
+{% block extra_css %}
+<style>
+    .attachment-card {
+        transition: all 0.2s ease-in-out;
+    }
+    .attachment-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .history-line::before {
+        content: '';
+        position: absolute;
+        left: 11px;
+        top: 24px;
+        bottom: 0;
+        width: 2px;
+        background: #e5e7eb;
+    }
+    .dark .history-line::before {
+        background: #374151;
+    }
+    .history-line:last-child::before {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="transactionDetail()" class="max-w-4xl mx-auto">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-6">
+        <a href="{% url 'transactions:list' %}" class="hover:text-primary-600 dark:hover:text-primary-400">
+            Transactions
+        </a>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+        <span class="text-gray-900 dark:text-white">Detail</span>
+    </nav>
+
+    <!-- Main Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-start justify-between">
+                <div class="flex items-center gap-4">
+                    <!-- Category Icon -->
+                    <div
+                        class="w-14 h-14 rounded-xl flex items-center justify-center"
+                        style="background-color: {{ transaction.category.color|default:'#6B7280' }}20;"
+                    >
+                        <span class="text-2xl">{{ transaction.category.icon|default:'📄' }}</span>
+                    </div>
+                    <div>
+                        <h1
+                            class="text-xl font-bold text-gray-900 dark:text-white"
+                            x-show="!editing"
+                            x-text="description"
+                        >{{ transaction.description }}</h1>
+                        <input
+                            x-show="editing"
+                            x-model="description"
+                            type="text"
+                            class="text-xl font-bold bg-transparent border-b-2 border-primary-500 focus:outline-none text-gray-900 dark:text-white"
+                        >
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            {{ transaction.category.name|default:"Non categorise" }}
+                            &bull;
+                            {{ transaction.account.name }}
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- Edit Toggle -->
+                    <button
+                        @click="toggleEdit()"
+                        :class="editing ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'"
+                        class="p-2 rounded-lg transition-colors"
+                    >
+                        <svg x-show="!editing" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        <svg x-show="editing" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+
+                    <!-- Actions Dropdown -->
+                    <div class="relative" x-data="{ open: false }">
+                        <button
+                            @click="open = !open"
+                            class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                            </svg>
+                        </button>
+                        <div
+                            x-show="open"
+                            @click.away="open = false"
+                            x-transition
+                            class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10"
+                        >
+                            <a href="{% url 'transactions:edit' transaction.id %}" class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 rounded-t-lg">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                                Modifier completement
+                            </a>
+                            <button @click="duplicateTransaction()" class="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                                Dupliquer
+                            </button>
+                            <button @click="splitTransaction()" class="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                </svg>
+                                Diviser
+                            </button>
+                            <hr class="my-1 border-gray-200 dark:border-gray-700">
+                            <button
+                                @click="showDeleteModal = true; open = false"
+                                class="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-b-lg"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                                Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Amount -->
+            <div class="mt-6">
+                <span
+                    x-show="!editing"
+                    :class="transaction.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                    class="text-4xl font-bold"
+                >
+                    {{ transaction.type == 'income' and '+' or '-' }}{{ transaction.amount }} {{ transaction.currency }}
+                </span>
+                <div x-show="editing" class="flex items-center gap-2">
+                    <select x-model="type" class="px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">
+                        <option value="expense">Depense</option>
+                        <option value="income">Revenu</option>
+                    </select>
+                    <input
+                        type="number"
+                        x-model="amount"
+                        step="0.01"
+                        class="text-3xl font-bold w-40 bg-transparent border-b-2 border-primary-500 focus:outline-none"
+                    >
+                    <select x-model="currency" class="px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">
+                        <option value="EUR">EUR</option>
+                        <option value="USD">USD</option>
+                        <option value="GBP">GBP</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Date -->
+            <div>
+                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Date</label>
+                <p x-show="!editing" class="text-gray-900 dark:text-white font-medium">
+                    {{ transaction.date|date:"l d F Y" }}
+                </p>
+                <input
+                    x-show="editing"
+                    type="date"
+                    x-model="date"
+                    class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500"
+                >
+            </div>
+
+            <!-- Category -->
+            <div>
+                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Categorie</label>
+                <div x-show="!editing" class="flex items-center gap-2">
+                    <span
+                        class="w-3 h-3 rounded-full"
+                        style="background-color: {{ transaction.category.color|default:'#6B7280' }};"
+                    ></span>
+                    <span class="text-gray-900 dark:text-white font-medium">
+                        {{ transaction.category.name|default:"Non categorise" }}
+                    </span>
+                </div>
+                <div x-show="editing" class="relative">
+                    <select
+                        x-model="categoryId"
+                        class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    >
+                        <option value="">Non categorise</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Account -->
+            <div>
+                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Compte</label>
+                <p x-show="!editing" class="text-gray-900 dark:text-white font-medium flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                        {{ transaction.account.icon|default:'🏦' }}
+                    </span>
+                    {{ transaction.account.name }}
+                </p>
+                <select
+                    x-show="editing"
+                    x-model="accountId"
+                    class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500"
+                >
+                    {% for account in accounts %}
+                    <option value="{{ account.id }}">{{ account.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Reference -->
+            <div>
+                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Reference</label>
+                <p x-show="!editing" class="text-gray-900 dark:text-white font-medium font-mono">
+                    {{ transaction.reference|default:"-" }}
+                </p>
+                <input
+                    x-show="editing"
+                    type="text"
+                    x-model="reference"
+                    placeholder="REF-123456"
+                    class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 font-mono"
+                >
+            </div>
+
+            <!-- Tags -->
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Tags</label>
+                <div x-show="!editing" class="flex flex-wrap gap-2">
+                    {% for tag in transaction.tags.all %}
+                    <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
+                        </svg>
+                        {{ tag.name }}
+                    </span>
+                    {% empty %}
+                    <span class="text-gray-400 dark:text-gray-500 text-sm">Aucun tag</span>
+                    {% endfor %}
+                </div>
+                <div x-show="editing" x-data="tagInput()">
+                    <div class="flex flex-wrap gap-2 p-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg min-h-[42px]">
+                        <template x-for="tag in tags" :key="tag">
+                            <span class="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 rounded-full text-sm">
+                                <span x-text="tag"></span>
+                                <button @click="removeTag(tag)" class="hover:text-primary-900">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </span>
+                        </template>
+                        <input
+                            type="text"
+                            x-model="newTag"
+                            @keydown.enter.prevent="addTag()"
+                            @keydown.comma.prevent="addTag()"
+                            placeholder="Ajouter un tag..."
+                            class="flex-1 min-w-[120px] bg-transparent border-none focus:outline-none text-sm"
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Notes</label>
+                <p x-show="!editing" class="text-gray-900 dark:text-white whitespace-pre-wrap">
+                    {{ transaction.notes|default:"Aucune note" }}
+                </p>
+                <textarea
+                    x-show="editing"
+                    x-model="notes"
+                    rows="3"
+                    placeholder="Ajouter des notes..."
+                    class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 resize-none"
+                ></textarea>
+            </div>
+        </div>
+
+        <!-- Save Button -->
+        <div x-show="editing" class="px-6 pb-6">
+            <div class="flex justify-end gap-3">
+                <button
+                    @click="cancelEdit()"
+                    class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                    Annuler
+                </button>
+                <button
+                    @click="saveChanges()"
+                    :disabled="isSaving"
+                    class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                    <svg x-show="isSaving" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span x-text="isSaving ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attachments Section -->
+    <div class="mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                    </svg>
+                    Pieces jointes
+                    <span class="text-sm font-normal text-gray-500">({{ transaction.attachments.count }})</span>
+                </h2>
+                <label class="cursor-pointer px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors">
+                    <input
+                        type="file"
+                        multiple
+                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                        @change="uploadAttachments($event)"
+                        class="hidden"
+                    >
+                    <span class="flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Ajouter
+                    </span>
+                </label>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <!-- Upload Progress -->
+            <div x-show="uploadProgress > 0 && uploadProgress < 100" class="mb-4">
+                <div class="flex items-center gap-4">
+                    <div class="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                            class="h-full bg-primary-500 transition-all duration-300"
+                            :style="`width: ${uploadProgress}%`"
+                        ></div>
+                    </div>
+                    <span class="text-sm text-gray-500" x-text="`${uploadProgress}%`"></span>
+                </div>
+            </div>
+
+            <!-- Attachments Grid -->
+            <div
+                id="attachments-grid"
+                class="grid grid-cols-2 md:grid-cols-4 gap-4"
+                hx-get="{% url 'transactions:attachments_list' transaction.id %}"
+                hx-trigger="load, attachmentUploaded from:body"
+                hx-swap="innerHTML"
+            >
+                {% for attachment in transaction.attachments.all %}
+                <div class="attachment-card group relative bg-gray-50 dark:bg-gray-700 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600">
+                    {% if attachment.is_image %}
+                    <img
+                        src="{{ attachment.file.url }}"
+                        alt="{{ attachment.filename }}"
+                        class="w-full h-32 object-cover"
+                    >
+                    {% else %}
+                    <div class="w-full h-32 flex items-center justify-center">
+                        <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    {% endif %}
+                    <div class="p-2">
+                        <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ attachment.filename }}</p>
+                        <p class="text-xs text-gray-500">{{ attachment.size|filesizeformat }}</p>
+                    </div>
+                    <!-- Actions Overlay -->
+                    <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <a
+                            href="{{ attachment.file.url }}"
+                            target="_blank"
+                            class="p-2 bg-white rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                            <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                        </a>
+                        <button
+                            @click="deleteAttachment('{{ attachment.id }}')"
+                            class="p-2 bg-white rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                            <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
+                    <svg class="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                    </svg>
+                    <p>Aucune piece jointe</p>
+                    <p class="text-sm">Glissez-deposez des fichiers ou cliquez sur Ajouter</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- History Section -->
+    <div class="mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Historique des modifications
+            </h2>
+        </div>
+
+        <div class="p-6">
+            <div class="space-y-0">
+                {% for entry in transaction.history.all %}
+                <div class="history-line relative pl-8 pb-6">
+                    <!-- Timeline Dot -->
+                    <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-{{ entry.action_color }}-100 dark:bg-{{ entry.action_color }}-900/30 flex items-center justify-center">
+                        {% if entry.action == 'created' %}
+                        <svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        {% elif entry.action == 'updated' %}
+                        <svg class="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        {% elif entry.action == 'categorized' %}
+                        <svg class="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                        </svg>
+                        {% endif %}
+                    </div>
+
+                    <!-- Content -->
+                    <div>
+                        <p class="text-sm text-gray-900 dark:text-white">
+                            <span class="font-medium">{{ entry.user.get_full_name|default:entry.user.email }}</span>
+                            {{ entry.description }}
+                        </p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {{ entry.created_at|date:"d/m/Y H:i" }}
+                        </p>
+                        {% if entry.changes %}
+                        <div class="mt-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm">
+                            {% for field, change in entry.changes.items %}
+                            <div class="flex items-center gap-2">
+                                <span class="text-gray-500">{{ field }}:</span>
+                                <span class="line-through text-red-500">{{ change.old }}</span>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                                </svg>
+                                <span class="text-green-600">{{ change.new }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <svg class="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <p>Aucune modification enregistree</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Transactions -->
+    <div class="mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                </svg>
+                Transactions similaires
+            </h2>
+        </div>
+
+        <div
+            class="divide-y divide-gray-200 dark:divide-gray-700"
+            hx-get="{% url 'transactions:related' transaction.id %}"
+            hx-trigger="load"
+            hx-swap="innerHTML"
+        >
+            <!-- Loading state -->
+            <div class="p-4 text-center text-gray-500">
+                <svg class="animate-spin w-6 h-6 mx-auto text-primary-500" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div
+    x-show="showDeleteModal"
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    @click.self="showDeleteModal = false"
+>
+    <div
+        x-show="showDeleteModal"
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 scale-95"
+        x-transition:enter-end="opacity-100 scale-100"
+        class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6"
+    >
+        <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Supprimer la transaction</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Cette action est irreversible</p>
+            </div>
+        </div>
+        <p class="text-gray-600 dark:text-gray-300 mb-6">
+            Etes-vous sur de vouloir supprimer cette transaction ?
+        </p>
+        <div class="flex justify-end gap-3">
+            <button
+                @click="showDeleteModal = false"
+                class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            >
+                Annuler
+            </button>
+            <button
+                @click="deleteTransaction()"
+                class="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors"
+            >
+                Supprimer
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function transactionDetail() {
+    return {
+        // Original values
+        transaction: {{ transaction_json|safe }},
+
+        // Editable values
+        editing: false,
+        description: '{{ transaction.description|escapejs }}',
+        amount: {{ transaction.amount }},
+        type: '{{ transaction.type }}',
+        currency: '{{ transaction.currency }}',
+        date: '{{ transaction.date|date:"Y-m-d" }}',
+        categoryId: '{{ transaction.category.id|default:"" }}',
+        accountId: '{{ transaction.account.id }}',
+        reference: '{{ transaction.reference|default:""|escapejs }}',
+        notes: '{{ transaction.notes|default:""|escapejs }}',
+        tags: [{% for tag in transaction.tags.all %}'{{ tag.name }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+
+        // UI State
+        isSaving: false,
+        showDeleteModal: false,
+        uploadProgress: 0,
+
+        toggleEdit() {
+            if (this.editing) {
+                this.cancelEdit();
+            } else {
+                this.editing = true;
+            }
+        },
+
+        cancelEdit() {
+            this.editing = false;
+            // Reset to original values
+            this.description = this.transaction.description;
+            this.amount = this.transaction.amount;
+            this.type = this.transaction.type;
+            this.currency = this.transaction.currency;
+            this.date = this.transaction.date;
+            this.categoryId = this.transaction.category_id || '';
+            this.accountId = this.transaction.account_id;
+            this.reference = this.transaction.reference || '';
+            this.notes = this.transaction.notes || '';
+            this.tags = [...this.transaction.tags];
+        },
+
+        async saveChanges() {
+            this.isSaving = true;
+
+            try {
+                const response = await fetch('{% url "transactions:update" transaction.id %}', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        description: this.description,
+                        amount: this.amount,
+                        type: this.type,
+                        currency: this.currency,
+                        date: this.date,
+                        category_id: this.categoryId || null,
+                        account_id: this.accountId,
+                        reference: this.reference,
+                        notes: this.notes,
+                        tags: this.tags
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    this.transaction = data;
+                    this.editing = false;
+                    Alpine.store('app').addNotification('Transaction mise a jour', 'success');
+                    // Refresh history
+                    htmx.trigger(document.body, 'transactionUpdated');
+                } else {
+                    throw new Error('Erreur lors de la mise a jour');
+                }
+            } catch (error) {
+                Alpine.store('app').addNotification(error.message, 'error');
+            } finally {
+                this.isSaving = false;
+            }
+        },
+
+        async deleteTransaction() {
+            try {
+                const response = await fetch('{% url "transactions:delete" transaction.id %}', {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+
+                if (response.ok) {
+                    window.location.href = '{% url "transactions:list" %}';
+                } else {
+                    throw new Error('Erreur lors de la suppression');
+                }
+            } catch (error) {
+                Alpine.store('app').addNotification(error.message, 'error');
+            }
+        },
+
+        duplicateTransaction() {
+            window.location.href = `{% url "transactions:create" %}?duplicate={{ transaction.id }}`;
+        },
+
+        splitTransaction() {
+            window.location.href = `{% url "transactions:split" transaction.id %}`;
+        },
+
+        async uploadAttachments(event) {
+            const files = event.target.files;
+            if (!files.length) return;
+
+            const formData = new FormData();
+            for (let file of files) {
+                formData.append('files', file);
+            }
+
+            this.uploadProgress = 0;
+
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        this.uploadProgress = Math.round((e.loaded / e.total) * 100);
+                    }
+                });
+
+                xhr.open('POST', '{% url "transactions:upload_attachment" transaction.id %}');
+                xhr.setRequestHeader('X-CSRFToken', document.querySelector('meta[name="csrf-token"]').content);
+
+                xhr.onload = () => {
+                    if (xhr.status === 200) {
+                        htmx.trigger(document.body, 'attachmentUploaded');
+                        Alpine.store('app').addNotification('Fichier(s) televerse(s)', 'success');
+                    } else {
+                        throw new Error('Erreur lors du telechargement');
+                    }
+                    this.uploadProgress = 0;
+                };
+
+                xhr.send(formData);
+            } catch (error) {
+                Alpine.store('app').addNotification(error.message, 'error');
+                this.uploadProgress = 0;
+            }
+        },
+
+        async deleteAttachment(attachmentId) {
+            if (!confirm('Supprimer cette piece jointe ?')) return;
+
+            try {
+                const response = await fetch(`{% url "transactions:delete_attachment" transaction.id 0 %}`.replace('/0/', `/${attachmentId}/`), {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+
+                if (response.ok) {
+                    htmx.trigger(document.body, 'attachmentUploaded');
+                    Alpine.store('app').addNotification('Piece jointe supprimee', 'success');
+                } else {
+                    throw new Error('Erreur lors de la suppression');
+                }
+            } catch (error) {
+                Alpine.store('app').addNotification(error.message, 'error');
+            }
+        }
+    };
+}
+
+function tagInput() {
+    return {
+        newTag: '',
+        get tags() {
+            return this.$root.closest('[x-data]').__x.$data.tags;
+        },
+        set tags(value) {
+            this.$root.closest('[x-data]').__x.$data.tags = value;
+        },
+        addTag() {
+            const tag = this.newTag.trim();
+            if (tag && !this.tags.includes(tag)) {
+                this.tags.push(tag);
+            }
+            this.newTag = '';
+        },
+        removeTag(tag) {
+            this.tags = this.tags.filter(t => t !== tag);
+        }
+    };
+}
+</script>
+{% endblock %}

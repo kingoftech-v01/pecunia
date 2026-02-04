@@ -1,0 +1,78 @@
+{% if recommendations %}
+<div class="row g-3">
+    {% for recommendation in recommendations %}
+    <div class="col-12">
+        {% include "ai/partials/recommendation_card.html" with recommendation=recommendation %}
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if recommendations.has_other_pages %}
+<nav aria-label="Recommendations pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if recommendations.has_previous %}
+        <li class="page-item">
+            <a class="page-link"
+               href="?page={{ recommendations.previous_page_number }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}"
+               hx-get="?page={{ recommendations.previous_page_number }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}"
+               hx-target="#recommendations-list"
+               hx-swap="innerHTML">
+                <i class="bi bi-chevron-left"></i> Previous
+            </a>
+        </li>
+        {% endif %}
+
+        {% for num in recommendations.paginator.page_range %}
+            {% if recommendations.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > recommendations.number|add:'-3' and num < recommendations.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link"
+                   href="?page={{ num }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}"
+                   hx-get="?page={{ num }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}"
+                   hx-target="#recommendations-list"
+                   hx-swap="innerHTML">
+                    {{ num }}
+                </a>
+            </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if recommendations.has_next %}
+        <li class="page-item">
+            <a class="page-link"
+               href="?page={{ recommendations.next_page_number }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}"
+               hx-get="?page={{ recommendations.next_page_number }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}"
+               hx-target="#recommendations-list"
+               hx-swap="innerHTML">
+                Next <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <i class="bi bi-lightbulb"></i>
+    <h5>No recommendations found</h5>
+    <p class="text-muted">
+        {% if current_filters.status == 'unread' %}
+        You've read all your recommendations. Great job staying informed!
+        {% elif current_filters.priority %}
+        No {{ current_filters.priority }} priority recommendations at the moment.
+        {% else %}
+        We're analyzing your financial data to generate personalized recommendations.
+        {% endif %}
+    </p>
+    {% if current_filters.status != 'active' or current_filters.priority %}
+    <a href="{% url 'ai:recommendations' %}" class="btn btn-outline-primary">
+        View All Recommendations
+    </a>
+    {% endif %}
+</div>
+{% endif %}

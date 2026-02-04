@@ -1,0 +1,805 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if budget %}Modifier{% else %}Nouveau{% endif %} Budget - Pecunia{% endblock %}
+
+{% block extra_css %}
+<style>
+    .step-indicator {
+        transition: all 0.3s ease;
+    }
+    .step-indicator.active {
+        background-color: #0ea5e9;
+        color: white;
+    }
+    .step-indicator.completed {
+        background-color: #22c55e;
+        color: white;
+    }
+    .step-content {
+        animation: fadeSlide 0.3s ease-out;
+    }
+    @keyframes fadeSlide {
+        from {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    .allocation-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #0ea5e9;
+        cursor: pointer;
+    }
+    .allocation-slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #0ea5e9;
+        cursor: pointer;
+        border: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="budgetWizard()" x-init="init()">
+    <!-- Breadcrumb -->
+    <nav class="mb-6">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'budgets:list' %}" class="text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400">
+                    Budgets
+                </a>
+            </li>
+            <li>
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </li>
+            <li class="text-gray-900 dark:text-white font-medium">
+                {% if budget %}Modifier{{ budget.name }}{% else %}Nouveau Budget{% endif %}
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+            {% if budget %}Modifier le budget{% else %}Creer un nouveau budget{% endif %}
+        </h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Suivez les etapes pour configurer votre budget
+        </p>
+    </div>
+
+    <!-- Progress Steps -->
+    <div class="mb-8">
+        <div class="flex items-center justify-center">
+            <!-- Step 1 -->
+            <div class="flex items-center">
+                <div :class="currentStep >= 1 ? (currentStep > 1 ? 'completed' : 'active') : ''"
+                     class="step-indicator w-10 h-10 rounded-full flex items-center justify-center font-semibold border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400">
+                    <template x-if="currentStep > 1">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </template>
+                    <template x-if="currentStep <= 1">
+                        <span>1</span>
+                    </template>
+                </div>
+                <span class="ml-2 text-sm font-medium" :class="currentStep >= 1 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'">
+                    Informations
+                </span>
+            </div>
+
+            <!-- Connector -->
+            <div class="w-16 h-1 mx-4 rounded" :class="currentStep > 1 ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'"></div>
+
+            <!-- Step 2 -->
+            <div class="flex items-center">
+                <div :class="currentStep >= 2 ? (currentStep > 2 ? 'completed' : 'active') : ''"
+                     class="step-indicator w-10 h-10 rounded-full flex items-center justify-center font-semibold border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400">
+                    <template x-if="currentStep > 2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </template>
+                    <template x-if="currentStep <= 2">
+                        <span>2</span>
+                    </template>
+                </div>
+                <span class="ml-2 text-sm font-medium" :class="currentStep >= 2 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'">
+                    Categories
+                </span>
+            </div>
+
+            <!-- Connector -->
+            <div class="w-16 h-1 mx-4 rounded" :class="currentStep > 2 ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'"></div>
+
+            <!-- Step 3 -->
+            <div class="flex items-center">
+                <div :class="currentStep >= 3 ? (currentStep > 3 ? 'completed' : 'active') : ''"
+                     class="step-indicator w-10 h-10 rounded-full flex items-center justify-center font-semibold border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400">
+                    <template x-if="currentStep > 3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </template>
+                    <template x-if="currentStep <= 3">
+                        <span>3</span>
+                    </template>
+                </div>
+                <span class="ml-2 text-sm font-medium" :class="currentStep >= 3 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'">
+                    Alertes
+                </span>
+            </div>
+
+            <!-- Connector -->
+            <div class="w-16 h-1 mx-4 rounded" :class="currentStep > 3 ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'"></div>
+
+            <!-- Step 4 -->
+            <div class="flex items-center">
+                <div :class="currentStep >= 4 ? 'active' : ''"
+                     class="step-indicator w-10 h-10 rounded-full flex items-center justify-center font-semibold border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400">
+                    <span>4</span>
+                </div>
+                <span class="ml-2 text-sm font-medium" :class="currentStep >= 4 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'">
+                    Apercu
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Container -->
+    <form method="post" @submit.prevent="submitForm()" id="budget-form">
+        {% csrf_token %}
+
+        <!-- Step 1: General Information -->
+        <div x-show="currentStep === 1" x-transition:enter="step-content" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Informations Generales</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Budget Name -->
+                <div class="md:col-span-2">
+                    <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Nom du budget <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text"
+                           id="name"
+                           name="name"
+                           x-model="formData.name"
+                           required
+                           placeholder="Ex: Budget mensuel, Vacances 2024..."
+                           class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                    <p x-show="errors.name" x-text="errors.name" class="mt-1 text-sm text-red-500"></p>
+                </div>
+
+                <!-- Description -->
+                <div class="md:col-span-2">
+                    <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Description
+                    </label>
+                    <textarea id="description"
+                              name="description"
+                              x-model="formData.description"
+                              rows="3"
+                              placeholder="Description optionnelle de ce budget..."
+                              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"></textarea>
+                </div>
+
+                <!-- Period -->
+                <div>
+                    <label for="period" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Periode <span class="text-red-500">*</span>
+                    </label>
+                    <select id="period"
+                            name="period"
+                            x-model="formData.period"
+                            @change="updateDates()"
+                            required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                        <option value="">Selectionner une periode</option>
+                        <option value="weekly">Hebdomadaire</option>
+                        <option value="monthly">Mensuel</option>
+                        <option value="quarterly">Trimestriel</option>
+                        <option value="yearly">Annuel</option>
+                        <option value="custom">Personnalise</option>
+                    </select>
+                </div>
+
+                <!-- Total Amount -->
+                <div>
+                    <label for="total_amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Montant total <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <input type="number"
+                               id="total_amount"
+                               name="total_amount"
+                               x-model.number="formData.totalAmount"
+                               required
+                               min="0"
+                               step="0.01"
+                               placeholder="0.00"
+                               class="w-full px-4 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                        <span class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">&euro;</span>
+                    </div>
+                    <p x-show="errors.totalAmount" x-text="errors.totalAmount" class="mt-1 text-sm text-red-500"></p>
+                </div>
+
+                <!-- Start Date -->
+                <div>
+                    <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Date de debut <span class="text-red-500">*</span>
+                    </label>
+                    <input type="date"
+                           id="start_date"
+                           name="start_date"
+                           x-model="formData.startDate"
+                           required
+                           class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                </div>
+
+                <!-- End Date -->
+                <div>
+                    <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Date de fin <span class="text-red-500">*</span>
+                    </label>
+                    <input type="date"
+                           id="end_date"
+                           name="end_date"
+                           x-model="formData.endDate"
+                           required
+                           class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                </div>
+
+                <!-- Active Status -->
+                <div class="md:col-span-2">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox"
+                               name="is_active"
+                               x-model="formData.isActive"
+                               class="w-4 h-4 text-primary-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500">
+                        <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Budget actif
+                        </span>
+                    </label>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Un budget actif sera utilise pour le suivi de vos depenses
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Category Allocation -->
+        <div x-show="currentStep === 2" x-transition:enter="step-content" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Allocation par Categorie</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        Repartissez votre budget entre les differentes categories
+                    </p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Total alloue</p>
+                    <p class="text-xl font-bold" :class="totalAllocated <= formData.totalAmount ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+                        <span x-text="totalAllocated.toFixed(2)"></span> / <span x-text="formData.totalAmount.toFixed(2)"></span> &euro;
+                    </p>
+                </div>
+            </div>
+
+            <!-- Allocation Progress -->
+            <div class="mb-6">
+                <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full transition-all duration-300 rounded-full"
+                         :class="allocationPercentage <= 100 ? 'bg-primary-500' : 'bg-red-500'"
+                         :style="'width: ' + Math.min(allocationPercentage, 100) + '%'"></div>
+                </div>
+                <p class="mt-1 text-sm text-right" :class="allocationPercentage <= 100 ? 'text-gray-500 dark:text-gray-400' : 'text-red-500'">
+                    <span x-text="allocationPercentage.toFixed(1)"></span>% alloue
+                </p>
+            </div>
+
+            <!-- Category List -->
+            <div class="space-y-4">
+                <template x-for="(category, index) in categories" :key="category.id">
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center" :style="'background-color: ' + category.color + '20'">
+                            <span class="text-lg" :style="'color: ' + category.color" x-text="category.icon"></span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <label :for="'cat_' + category.id" class="block text-sm font-medium text-gray-900 dark:text-white" x-text="category.name"></label>
+                            <div class="mt-2 flex items-center gap-4">
+                                <input type="range"
+                                       :id="'cat_' + category.id"
+                                       :name="'category_' + category.id"
+                                       x-model.number="category.amount"
+                                       min="0"
+                                       :max="formData.totalAmount"
+                                       step="10"
+                                       class="allocation-slider flex-1 h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                                <div class="w-28 relative">
+                                    <input type="number"
+                                           x-model.number="category.amount"
+                                           min="0"
+                                           step="0.01"
+                                           class="w-full px-3 py-1.5 pr-8 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                                    <span class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm">&euro;</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button"
+                                @click="removeCategory(index)"
+                                class="flex-shrink-0 p-2 text-gray-400 hover:text-red-500 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Add Category -->
+            <div class="mt-4">
+                <button type="button"
+                        @click="showCategoryPicker = true"
+                        class="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 hover:border-primary-500 hover:text-primary-500 dark:hover:border-primary-400 dark:hover:text-primary-400 transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
+                    Ajouter une categorie
+                </button>
+            </div>
+
+            <!-- Category Picker Modal -->
+            <div x-show="showCategoryPicker"
+                 x-cloak
+                 class="fixed inset-0 z-50 overflow-y-auto"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100">
+                <div class="flex items-center justify-center min-h-screen px-4">
+                    <div class="fixed inset-0 bg-gray-500 dark:bg-gray-900 bg-opacity-75 dark:bg-opacity-75" @click="showCategoryPicker = false"></div>
+                    <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Selectionner une categorie</h3>
+                        <div class="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+                            <template x-for="cat in availableCategories" :key="cat.id">
+                                <button type="button"
+                                        @click="addCategory(cat)"
+                                        class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-primary-500 dark:hover:border-primary-400 transition-colors text-left">
+                                    <span class="text-lg" x-text="cat.icon"></span>
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="cat.name"></span>
+                                </button>
+                            </template>
+                        </div>
+                        <button type="button"
+                                @click="showCategoryPicker = false"
+                                class="mt-4 w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Alerts Configuration -->
+        <div x-show="currentStep === 3" x-transition:enter="step-content" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Configuration des Alertes</h2>
+
+            <!-- Global Alert Settings -->
+            <div class="space-y-6">
+                <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-900 dark:text-white">Activer les alertes</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Recevoir des notifications quand les seuils sont atteints</p>
+                    </div>
+                    <button type="button"
+                            @click="formData.alertsEnabled = !formData.alertsEnabled"
+                            :class="formData.alertsEnabled ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'"
+                            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors">
+                        <span :class="formData.alertsEnabled ? 'translate-x-6' : 'translate-x-1'"
+                              class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"></span>
+                    </button>
+                </div>
+
+                <div x-show="formData.alertsEnabled" x-transition class="space-y-4">
+                    <!-- Warning Threshold -->
+                    <div class="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium text-amber-800 dark:text-amber-200">Seuil d'avertissement</h3>
+                                <p class="text-xs text-amber-600 dark:text-amber-400">Alerte lorsque le budget est presque atteint</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <input type="range"
+                                   x-model.number="formData.warningThreshold"
+                                   min="50" max="95" step="5"
+                                   class="flex-1 h-2 bg-amber-200 dark:bg-amber-800 rounded-lg appearance-none cursor-pointer">
+                            <div class="w-20 text-center">
+                                <span class="text-lg font-bold text-amber-800 dark:text-amber-200" x-text="formData.warningThreshold"></span>
+                                <span class="text-sm text-amber-600 dark:text-amber-400">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Danger Threshold -->
+                    <div class="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium text-red-800 dark:text-red-200">Seuil critique</h3>
+                                <p class="text-xs text-red-600 dark:text-red-400">Alerte lorsque le budget est depasse</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <input type="range"
+                                   x-model.number="formData.dangerThreshold"
+                                   min="90" max="120" step="5"
+                                   class="flex-1 h-2 bg-red-200 dark:bg-red-800 rounded-lg appearance-none cursor-pointer">
+                            <div class="w-20 text-center">
+                                <span class="text-lg font-bold text-red-800 dark:text-red-200" x-text="formData.dangerThreshold"></span>
+                                <span class="text-sm text-red-600 dark:text-red-400">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notification Methods -->
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Methodes de notification</h3>
+                        <div class="space-y-3">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox"
+                                       x-model="formData.notifyEmail"
+                                       class="w-4 h-4 text-primary-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500">
+                                <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">Email</span>
+                            </label>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox"
+                                       x-model="formData.notifyPush"
+                                       class="w-4 h-4 text-primary-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500">
+                                <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">Notification push</span>
+                            </label>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox"
+                                       x-model="formData.notifyInApp"
+                                       class="w-4 h-4 text-primary-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500">
+                                <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">Notification dans l'application</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Category-specific Alerts -->
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Alertes par categorie</h3>
+                        <div class="space-y-2">
+                            <template x-for="cat in categories" :key="cat.id">
+                                <div class="flex items-center justify-between py-2">
+                                    <div class="flex items-center gap-2">
+                                        <span x-text="cat.icon"></span>
+                                        <span class="text-sm text-gray-700 dark:text-gray-300" x-text="cat.name"></span>
+                                    </div>
+                                    <button type="button"
+                                            @click="cat.alertEnabled = !cat.alertEnabled"
+                                            :class="cat.alertEnabled ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'"
+                                            class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors">
+                                        <span :class="cat.alertEnabled ? 'translate-x-5' : 'translate-x-1'"
+                                              class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform"></span>
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Preview -->
+        <div x-show="currentStep === 4" x-transition:enter="step-content" class="space-y-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Apercu du Budget</h2>
+
+                <!-- Summary Card -->
+                <div class="bg-gradient-to-r from-primary-500 to-primary-700 rounded-xl p-6 text-white mb-6">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <h3 class="text-2xl font-bold" x-text="formData.name || 'Nouveau Budget'"></h3>
+                            <p class="text-primary-100 mt-1" x-text="formData.description || 'Aucune description'"></p>
+                        </div>
+                        <span class="px-3 py-1 bg-white/20 rounded-full text-sm font-medium"
+                              x-text="formData.isActive ? 'Actif' : 'Inactif'"></span>
+                    </div>
+                    <div class="mt-6 grid grid-cols-3 gap-4">
+                        <div>
+                            <p class="text-primary-100 text-sm">Periode</p>
+                            <p class="font-semibold" x-text="getPeriodLabel()"></p>
+                        </div>
+                        <div>
+                            <p class="text-primary-100 text-sm">Debut</p>
+                            <p class="font-semibold" x-text="formData.startDate"></p>
+                        </div>
+                        <div>
+                            <p class="text-primary-100 text-sm">Fin</p>
+                            <p class="font-semibold" x-text="formData.endDate"></p>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white/20">
+                        <p class="text-primary-100 text-sm">Montant total</p>
+                        <p class="text-3xl font-bold"><span x-text="formData.totalAmount.toFixed(2)"></span> &euro;</p>
+                    </div>
+                </div>
+
+                <!-- Categories Preview -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Repartition par categorie</h3>
+                    <div class="space-y-3">
+                        <template x-for="cat in categories" :key="cat.id">
+                            <div class="flex items-center gap-4">
+                                <div class="flex items-center gap-2 w-32">
+                                    <span x-text="cat.icon"></span>
+                                    <span class="text-sm text-gray-700 dark:text-gray-300" x-text="cat.name"></span>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                        <div class="h-full bg-primary-500 rounded-full"
+                                             :style="'width: ' + (cat.amount / formData.totalAmount * 100) + '%'"></div>
+                                    </div>
+                                </div>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white w-24 text-right">
+                                    <span x-text="cat.amount.toFixed(2)"></span> &euro;
+                                </span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Alerts Preview -->
+                <div x-show="formData.alertsEnabled">
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Alertes configurees</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                            <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <span class="text-sm text-amber-800 dark:text-amber-200">
+                                Avertissement a <span x-text="formData.warningThreshold"></span>%
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="text-sm text-red-800 dark:text-red-200">
+                                Critique a <span x-text="formData.dangerThreshold"></span>%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="mt-6 flex items-center justify-between">
+            <button type="button"
+                    x-show="currentStep > 1"
+                    @click="previousStep()"
+                    class="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Precedent
+            </button>
+            <div x-show="currentStep === 1"></div>
+
+            <div class="flex items-center gap-3">
+                <a href="{% url 'budgets:list' %}"
+                   class="px-4 py-2 text-gray-700 dark:text-gray-300 font-medium hover:text-gray-900 dark:hover:text-white transition-colors">
+                    Annuler
+                </a>
+                <button type="button"
+                        x-show="currentStep < 4"
+                        @click="nextStep()"
+                        class="inline-flex items-center px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
+                    Suivant
+                    <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <button type="submit"
+                        x-show="currentStep === 4"
+                        class="inline-flex items-center px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    Enregistrer
+                </button>
+            </div>
+        </div>
+
+        <!-- Hidden fields for form submission -->
+        <input type="hidden" name="categories_json" :value="JSON.stringify(categories)">
+        <input type="hidden" name="alerts_config" :value="JSON.stringify({
+            enabled: formData.alertsEnabled,
+            warningThreshold: formData.warningThreshold,
+            dangerThreshold: formData.dangerThreshold,
+            notifyEmail: formData.notifyEmail,
+            notifyPush: formData.notifyPush,
+            notifyInApp: formData.notifyInApp
+        })">
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function budgetWizard() {
+    return {
+        currentStep: 1,
+        showCategoryPicker: false,
+
+        formData: {
+            name: '{{ budget.name|default:"" }}',
+            description: '{{ budget.description|default:"" }}',
+            period: '{{ budget.period|default:"monthly" }}',
+            totalAmount: {{ budget.total_amount|default:0 }},
+            startDate: '{{ budget.start_date|date:"Y-m-d"|default:"" }}',
+            endDate: '{{ budget.end_date|date:"Y-m-d"|default:"" }}',
+            isActive: {{ budget.is_active|yesno:"true,false"|default:"true" }},
+            alertsEnabled: {{ budget.alerts_enabled|yesno:"true,false"|default:"true" }},
+            warningThreshold: {{ budget.warning_threshold|default:80 }},
+            dangerThreshold: {{ budget.danger_threshold|default:100 }},
+            notifyEmail: true,
+            notifyPush: true,
+            notifyInApp: true
+        },
+
+        errors: {},
+
+        categories: [
+            {% for item in budget.items.all %}
+            { id: {{ item.category.pk }}, name: '{{ item.category.name }}', icon: '{{ item.category.icon }}', color: '{{ item.category.color }}', amount: {{ item.amount }}, alertEnabled: {{ item.alert_enabled|yesno:"true,false" }} },
+            {% endfor %}
+        ],
+
+        allCategories: [
+            { id: 1, name: 'Alimentation', icon: '🍕', color: '#f59e0b' },
+            { id: 2, name: 'Transport', icon: '🚗', color: '#3b82f6' },
+            { id: 3, name: 'Logement', icon: '🏠', color: '#8b5cf6' },
+            { id: 4, name: 'Loisirs', icon: '🎮', color: '#ec4899' },
+            { id: 5, name: 'Sante', icon: '💊', color: '#10b981' },
+            { id: 6, name: 'Shopping', icon: '🛍️', color: '#f43f5e' },
+            { id: 7, name: 'Factures', icon: '📄', color: '#6366f1' },
+            { id: 8, name: 'Epargne', icon: '💰', color: '#14b8a6' },
+            { id: 9, name: 'Education', icon: '📚', color: '#a855f7' },
+            { id: 10, name: 'Autres', icon: '📦', color: '#64748b' }
+        ],
+
+        get availableCategories() {
+            const usedIds = this.categories.map(c => c.id);
+            return this.allCategories.filter(c => !usedIds.includes(c.id));
+        },
+
+        get totalAllocated() {
+            return this.categories.reduce((sum, cat) => sum + (parseFloat(cat.amount) || 0), 0);
+        },
+
+        get allocationPercentage() {
+            return this.formData.totalAmount > 0 ? (this.totalAllocated / this.formData.totalAmount * 100) : 0;
+        },
+
+        init() {
+            // Set default dates if not provided
+            if (!this.formData.startDate) {
+                const today = new Date();
+                this.formData.startDate = today.toISOString().split('T')[0];
+            }
+            if (!this.formData.endDate) {
+                this.updateDates();
+            }
+        },
+
+        updateDates() {
+            const start = new Date(this.formData.startDate || new Date());
+            let end = new Date(start);
+
+            switch (this.formData.period) {
+                case 'weekly':
+                    end.setDate(end.getDate() + 7);
+                    break;
+                case 'monthly':
+                    end.setMonth(end.getMonth() + 1);
+                    break;
+                case 'quarterly':
+                    end.setMonth(end.getMonth() + 3);
+                    break;
+                case 'yearly':
+                    end.setFullYear(end.getFullYear() + 1);
+                    break;
+            }
+
+            this.formData.endDate = end.toISOString().split('T')[0];
+        },
+
+        validateStep(step) {
+            this.errors = {};
+
+            if (step === 1) {
+                if (!this.formData.name.trim()) {
+                    this.errors.name = 'Le nom est requis';
+                }
+                if (this.formData.totalAmount <= 0) {
+                    this.errors.totalAmount = 'Le montant doit etre superieur a 0';
+                }
+                return Object.keys(this.errors).length === 0;
+            }
+
+            return true;
+        },
+
+        nextStep() {
+            if (this.validateStep(this.currentStep)) {
+                this.currentStep++;
+            }
+        },
+
+        previousStep() {
+            if (this.currentStep > 1) {
+                this.currentStep--;
+            }
+        },
+
+        addCategory(cat) {
+            this.categories.push({
+                ...cat,
+                amount: 0,
+                alertEnabled: true
+            });
+            this.showCategoryPicker = false;
+        },
+
+        removeCategory(index) {
+            this.categories.splice(index, 1);
+        },
+
+        getPeriodLabel() {
+            const labels = {
+                'weekly': 'Hebdomadaire',
+                'monthly': 'Mensuel',
+                'quarterly': 'Trimestriel',
+                'yearly': 'Annuel',
+                'custom': 'Personnalise'
+            };
+            return labels[this.formData.period] || this.formData.period;
+        },
+
+        async submitForm() {
+            if (!this.validateStep(1)) {
+                this.currentStep = 1;
+                return;
+            }
+
+            // Submit the form
+            document.getElementById('budget-form').submit();
+        }
+    }
+}
+</script>
+{% endblock %}

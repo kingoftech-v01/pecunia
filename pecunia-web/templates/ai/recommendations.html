@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}AI Recommendations - Pecunia{% endblock %}
+
+{% block extra_css %}
+<style>
+    .recommendation-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid transparent;
+    }
+
+    .recommendation-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .recommendation-card.priority-urgent {
+        border-left-color: #dc3545;
+    }
+
+    .recommendation-card.priority-high {
+        border-left-color: #fd7e14;
+    }
+
+    .recommendation-card.priority-medium {
+        border-left-color: #ffc107;
+    }
+
+    .recommendation-card.priority-low {
+        border-left-color: #28a745;
+    }
+
+    .recommendation-card.is-read {
+        opacity: 0.75;
+    }
+
+    .priority-badge {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .type-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        font-size: 1.2rem;
+    }
+
+    .type-budget { background-color: rgba(13, 110, 253, 0.1); color: #0d6efd; }
+    .type-spending { background-color: rgba(220, 53, 69, 0.1); color: #dc3545; }
+    .type-saving { background-color: rgba(40, 167, 69, 0.1); color: #28a745; }
+    .type-anomaly { background-color: rgba(255, 193, 7, 0.1); color: #ffc107; }
+    .type-category { background-color: rgba(111, 66, 193, 0.1); color: #6f42c1; }
+    .type-trend { background-color: rgba(23, 162, 184, 0.1); color: #17a2b8; }
+    .type-goal { background-color: rgba(253, 126, 20, 0.1); color: #fd7e14; }
+
+    .filter-chip {
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        border: 1px solid #dee2e6;
+        background: white;
+        transition: all 0.2s;
+    }
+
+    .filter-chip:hover {
+        border-color: #0d6efd;
+        color: #0d6efd;
+    }
+
+    .filter-chip.active {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        color: white;
+    }
+
+    .empty-state {
+        padding: 3rem;
+        text-align: center;
+        color: #6c757d;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .htmx-indicator {
+        display: none;
+    }
+
+    .htmx-request .htmx-indicator {
+        display: inline-block;
+    }
+
+    .htmx-request.htmx-indicator {
+        display: inline-block;
+    }
+
+    .fade-out {
+        animation: fadeOut 0.3s ease forwards;
+    }
+
+    @keyframes fadeOut {
+        to {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-lightbulb me-2"></i>AI Recommendations
+            </h1>
+            <p class="text-muted mb-0">Personalized insights to improve your finances</p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if counts.unread > 0 %}
+            <button class="btn btn-outline-primary"
+                    hx-post="{% url 'ai:mark-all-read' %}"
+                    hx-swap="none"
+                    hx-trigger="click">
+                <i class="bi bi-check-all me-1"></i>
+                Mark All Read
+            </button>
+            {% endif %}
+            <a href="{% url 'ai:insights' %}" class="btn btn-primary">
+                <i class="bi bi-graph-up me-1"></i>
+                View Insights
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Active</h6>
+                            <h3 class="mb-0">{{ counts.total }}</h3>
+                        </div>
+                        <div class="type-icon type-trend">
+                            <i class="bi bi-collection"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Unread</h6>
+                            <h3 class="mb-0">{{ counts.unread }}</h3>
+                        </div>
+                        <div class="type-icon type-budget">
+                            <i class="bi bi-bell"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Urgent</h6>
+                            <h3 class="mb-0 {% if counts.urgent > 0 %}text-danger{% endif %}">
+                                {{ counts.urgent }}
+                            </h3>
+                        </div>
+                        <div class="type-icon type-anomaly">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body py-3">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="text-muted me-2">Status:</span>
+                        <a href="?status=active{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}"
+                           class="filter-chip {% if current_filters.status == 'active' %}active{% endif %}"
+                           hx-get="?status=active{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}"
+                           hx-target="#recommendations-list"
+                           hx-swap="innerHTML"
+                           hx-push-url="true">
+                            All Active
+                        </a>
+                        <a href="?status=unread{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}"
+                           class="filter-chip {% if current_filters.status == 'unread' %}active{% endif %}"
+                           hx-get="?status=unread{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}"
+                           hx-target="#recommendations-list"
+                           hx-swap="innerHTML"
+                           hx-push-url="true">
+                            Unread
+                        </a>
+                        <a href="?status=read{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}"
+                           class="filter-chip {% if current_filters.status == 'read' %}active{% endif %}"
+                           hx-get="?status=read{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}"
+                           hx-target="#recommendations-list"
+                           hx-swap="innerHTML"
+                           hx-push-url="true">
+                            Read
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex flex-wrap gap-2 justify-content-md-end mt-2 mt-md-0">
+                        <span class="text-muted me-2">Priority:</span>
+                        <a href="?status={{ current_filters.status }}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}"
+                           class="filter-chip {% if not current_filters.priority %}active{% endif %}"
+                           hx-get="?status={{ current_filters.status }}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}"
+                           hx-target="#recommendations-list"
+                           hx-swap="innerHTML"
+                           hx-push-url="true">
+                            All
+                        </a>
+                        {% for value, label in priorities %}
+                        <a href="?status={{ current_filters.status }}&priority={{ value }}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}"
+                           class="filter-chip {% if current_filters.priority == value %}active{% endif %}"
+                           hx-get="?status={{ current_filters.status }}&priority={{ value }}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}"
+                           hx-target="#recommendations-list"
+                           hx-swap="innerHTML"
+                           hx-push-url="true">
+                            {{ label }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendations List -->
+    <div id="recommendations-list">
+        {% include "ai/partials/recommendations_list.html" %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Handle recommendation updates
+    document.body.addEventListener('recommendationsUpdated', function() {
+        htmx.ajax('GET', window.location.href, {target: '#recommendations-list', swap: 'innerHTML'});
+    });
+
+    // Smooth removal animation
+    document.body.addEventListener('htmx:beforeSwap', function(evt) {
+        if (evt.detail.target.classList.contains('recommendation-card')) {
+            evt.detail.target.classList.add('fade-out');
+        }
+    });
+</script>
+{% endblock %}

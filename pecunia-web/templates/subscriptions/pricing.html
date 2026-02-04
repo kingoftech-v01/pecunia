@@ -1,0 +1,622 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Pricing - Pecunia{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pricing-card {
+        transition: all 0.3s ease;
+    }
+    .pricing-card:hover {
+        transform: translateY(-4px);
+    }
+    .pricing-card.featured {
+        border: 2px solid #0ea5e9;
+        position: relative;
+    }
+    .pricing-card.featured::before {
+        content: 'Most Popular';
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+        color: white;
+        padding: 4px 16px;
+        border-radius: 9999px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .toggle-switch {
+        position: relative;
+        width: 200px;
+        height: 44px;
+        background: #e5e7eb;
+        border-radius: 22px;
+        padding: 4px;
+        cursor: pointer;
+    }
+    .dark .toggle-switch {
+        background: #374151;
+    }
+    .toggle-slider {
+        position: absolute;
+        width: calc(50% - 4px);
+        height: 36px;
+        background: white;
+        border-radius: 18px;
+        transition: transform 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .dark .toggle-slider {
+        background: #1f2937;
+    }
+    .toggle-switch.yearly .toggle-slider {
+        transform: translateX(100%);
+    }
+    .feature-check {
+        color: #10b981;
+    }
+    .feature-x {
+        color: #9ca3af;
+    }
+    .savings-badge {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="pricingApp()">
+    <!-- Hero Section -->
+    <div class="text-center mb-12">
+        <h1 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+            Simple, Transparent Pricing
+        </h1>
+        <p class="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+            Choose the perfect plan for your financial management needs.
+            Upgrade or downgrade anytime.
+        </p>
+    </div>
+
+    <!-- Billing Toggle -->
+    <div class="flex items-center justify-center gap-4 mb-12">
+        <span :class="!yearly ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-500 dark:text-gray-400'"
+              class="text-sm transition-colors">
+            Monthly
+        </span>
+        <div class="toggle-switch"
+             :class="{ 'yearly': yearly }"
+             @click="yearly = !yearly">
+            <div class="toggle-slider"></div>
+            <div class="relative z-10 flex h-full">
+                <span class="flex-1 flex items-center justify-center text-sm font-medium"
+                      :class="!yearly ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'">
+                    Monthly
+                </span>
+                <span class="flex-1 flex items-center justify-center text-sm font-medium"
+                      :class="yearly ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'">
+                    Yearly
+                </span>
+            </div>
+        </div>
+        <span :class="yearly ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-500 dark:text-gray-400'"
+              class="text-sm transition-colors">
+            Yearly
+            <span class="savings-badge ml-2">Save 20%</span>
+        </span>
+    </div>
+
+    <!-- Pricing Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+        {% for plan in plans %}
+        <div class="pricing-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden
+                    {% if plan.is_featured %}featured{% endif %}"
+             {% if plan.is_featured %}style="margin-top: 8px;"{% endif %}>
+
+            <!-- Card Header -->
+            <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">{{ plan.name }}</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 h-12">{{ plan.description }}</p>
+
+                <!-- Price -->
+                <div class="mt-4">
+                    <div class="flex items-baseline">
+                        <span class="text-4xl font-bold text-gray-900 dark:text-white"
+                              x-text="yearly ? '{{ plan.price_yearly }}' : '{{ plan.price_monthly }}'">
+                            {{ plan.price_monthly }}
+                        </span>
+                        <span class="text-gray-500 dark:text-gray-400 ml-1">&euro;</span>
+                        <span class="text-gray-500 dark:text-gray-400 ml-1" x-text="yearly ? '/year' : '/month'">
+                            /month
+                        </span>
+                    </div>
+                    {% if plan.yearly_savings > 0 %}
+                    <p class="text-sm text-green-600 dark:text-green-400 mt-1" x-show="yearly">
+                        Save {{ plan.yearly_savings }}% with yearly billing
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Features List -->
+            <div class="p-6">
+                <ul class="space-y-3">
+                    <!-- Limits -->
+                    <li class="flex items-start">
+                        <svg class="w-5 h-5 feature-check mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                        <span class="text-sm text-gray-600 dark:text-gray-300">
+                            {% if plan.max_bank_accounts == -1 %}Unlimited{% else %}{{ plan.max_bank_accounts }}{% endif %} bank account{% if plan.max_bank_accounts != 1 %}s{% endif %}
+                        </span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="w-5 h-5 feature-check mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                        <span class="text-sm text-gray-600 dark:text-gray-300">
+                            {% if plan.max_budgets == -1 %}Unlimited{% else %}{{ plan.max_budgets }}{% endif %} budget{% if plan.max_budgets != 1 %}s{% endif %}
+                        </span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="w-5 h-5 feature-check mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                        <span class="text-sm text-gray-600 dark:text-gray-300">
+                            {% if plan.max_transactions_per_month == -1 %}Unlimited{% else %}{{ plan.max_transactions_per_month }}{% endif %} transactions/month
+                        </span>
+                    </li>
+
+                    <!-- Feature flags -->
+                    <li class="flex items-start">
+                        {% if plan.ai_categorization %}
+                        <svg class="w-5 h-5 feature-check mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                        {% else %}
+                        <svg class="w-5 h-5 feature-x mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        {% endif %}
+                        <span class="text-sm {% if plan.ai_categorization %}text-gray-600 dark:text-gray-300{% else %}text-gray-400 dark:text-gray-500{% endif %}">
+                            AI Categorization
+                        </span>
+                    </li>
+                    <li class="flex items-start">
+                        {% if plan.bank_sync %}
+                        <svg class="w-5 h-5 feature-check mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                        {% else %}
+                        <svg class="w-5 h-5 feature-x mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        {% endif %}
+                        <span class="text-sm {% if plan.bank_sync %}text-gray-600 dark:text-gray-300{% else %}text-gray-400 dark:text-gray-500{% endif %}">
+                            Bank Sync
+                        </span>
+                    </li>
+                    <li class="flex items-start">
+                        {% if plan.export_pdf %}
+                        <svg class="w-5 h-5 feature-check mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                        {% else %}
+                        <svg class="w-5 h-5 feature-x mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        {% endif %}
+                        <span class="text-sm {% if plan.export_pdf %}text-gray-600 dark:text-gray-300{% else %}text-gray-400 dark:text-gray-500{% endif %}">
+                            PDF Reports
+                        </span>
+                    </li>
+                    <li class="flex items-start">
+                        {% if plan.priority_support %}
+                        <svg class="w-5 h-5 feature-check mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                        {% else %}
+                        <svg class="w-5 h-5 feature-x mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        {% endif %}
+                        <span class="text-sm {% if plan.priority_support %}text-gray-600 dark:text-gray-300{% else %}text-gray-400 dark:text-gray-500{% endif %}">
+                            Priority Support
+                        </span>
+                    </li>
+                </ul>
+
+                <!-- CTA Button -->
+                <div class="mt-6">
+                    {% if current_plan and current_plan.id == plan.id %}
+                    <button disabled
+                            class="w-full py-3 px-4 rounded-lg font-medium text-gray-500 bg-gray-100 dark:bg-gray-700 dark:text-gray-400 cursor-not-allowed">
+                        Current Plan
+                    </button>
+                    {% elif plan.tier == 'free' %}
+                    <a href="{% url 'accounts:register' %}"
+                       class="block w-full py-3 px-4 rounded-lg font-medium text-center transition-colors
+                              bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600">
+                        Get Started Free
+                    </a>
+                    {% else %}
+                    <a href="{% url 'frontend:subscriptions:checkout' plan.id %}?interval=<span x-text='yearly ? \"year\" : \"month\"'>month</span>"
+                       :href="'{% url 'frontend:subscriptions:checkout' plan.id %}?interval=' + (yearly ? 'year' : 'month')"
+                       class="block w-full py-3 px-4 rounded-lg font-medium text-center transition-colors
+                              {% if plan.is_featured %}
+                              bg-primary-600 text-white hover:bg-primary-700
+                              {% else %}
+                              bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100
+                              {% endif %}">
+                        {% if current_plan %}
+                            {% if plan.display_order > current_plan.display_order %}
+                                Upgrade to {{ plan.name }}
+                            {% else %}
+                                Switch to {{ plan.name }}
+                            {% endif %}
+                        {% else %}
+                            Choose {{ plan.name }}
+                        {% endif %}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Feature Comparison Table -->
+    <div class="mb-16">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white text-center mb-8">
+            Feature Comparison
+        </h2>
+
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden overflow-x-auto">
+            <table class="w-full min-w-[800px]">
+                <thead>
+                    <tr class="bg-gray-50 dark:bg-gray-900">
+                        <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Feature</th>
+                        {% for plan in plans %}
+                        <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-white {% if plan.is_featured %}bg-primary-50 dark:bg-primary-900/20{% endif %}">
+                            {{ plan.name }}
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    <!-- Limits Section -->
+                    <tr>
+                        <td colspan="5" class="px-6 py-3 bg-gray-50 dark:bg-gray-900/50 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            Limits
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">Bank Accounts</td>
+                        {% for plan in plans %}
+                        <td class="px-6 py-4 text-center text-sm text-gray-900 dark:text-white {% if plan.is_featured %}bg-primary-50/50 dark:bg-primary-900/10{% endif %}">
+                            {% if plan.max_bank_accounts == -1 %}Unlimited{% else %}{{ plan.max_bank_accounts }}{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">Budgets</td>
+                        {% for plan in plans %}
+                        <td class="px-6 py-4 text-center text-sm text-gray-900 dark:text-white {% if plan.is_featured %}bg-primary-50/50 dark:bg-primary-900/10{% endif %}">
+                            {% if plan.max_budgets == -1 %}Unlimited{% else %}{{ plan.max_budgets }}{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">Transactions/month</td>
+                        {% for plan in plans %}
+                        <td class="px-6 py-4 text-center text-sm text-gray-900 dark:text-white {% if plan.is_featured %}bg-primary-50/50 dark:bg-primary-900/10{% endif %}">
+                            {% if plan.max_transactions_per_month == -1 %}Unlimited{% else %}{{ plan.max_transactions_per_month }}{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">Categories</td>
+                        {% for plan in plans %}
+                        <td class="px-6 py-4 text-center text-sm text-gray-900 dark:text-white {% if plan.is_featured %}bg-primary-50/50 dark:bg-primary-900/10{% endif %}">
+                            {% if plan.max_categories == -1 %}Unlimited{% else %}{{ plan.max_categories }}{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">Family Members</td>
+                        {% for plan in plans %}
+                        <td class="px-6 py-4 text-center text-sm text-gray-900 dark:text-white {% if plan.is_featured %}bg-primary-50/50 dark:bg-primary-900/10{% endif %}">
+                            {% if plan.max_family_members == 0 %}-{% elif plan.max_family_members == -1 %}Unlimited{% else %}{{ plan.max_family_members }}{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+
+                    <!-- Features Section -->
+                    <tr>
+                        <td colspan="5" class="px-6 py-3 bg-gray-50 dark:bg-gray-900/50 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            Features
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">AI Categorization</td>
+                        {% for plan in plans %}
+                        <td class="px-6 py-4 text-center {% if plan.is_featured %}bg-primary-50/50 dark:bg-primary-900/10{% endif %}">
+                            {% if plan.ai_categorization %}
+                            <svg class="w-5 h-5 text-green-500 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            {% else %}
+                            <svg class="w-5 h-5 text-gray-300 dark:text-gray-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">AI Insights</td>
+                        {% for plan in plans %}
+                        <td class="px-6 py-4 text-center {% if plan.is_featured %}bg-primary-50/50 dark:bg-primary-900/10{% endif %}">
+                            {% if plan.ai_insights %}
+                            <svg class="w-5 h-5 text-green-500 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            {% else %}
+                            <svg class="w-5 h-5 text-gray-300 dark:text-gray-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">Bank Sync</td>
+                        {% for plan in plans %}
+                        <td class="px-6 py-4 text-center {% if plan.is_featured %}bg-primary-50/50 dark:bg-primary-900/10{% endif %}">
+                            {% if plan.bank_sync %}
+                            <svg class="w-5 h-5 text-green-500 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            {% else %}
+                            <svg class="w-5 h-5 text-gray-300 dark:text-gray-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">CSV Export</td>
+                        {% for plan in plans %}
+                        <td class="px-6 py-4 text-center {% if plan.is_featured %}bg-primary-50/50 dark:bg-primary-900/10{% endif %}">
+                            {% if plan.export_csv %}
+                            <svg class="w-5 h-5 text-green-500 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            {% else %}
+                            <svg class="w-5 h-5 text-gray-300 dark:text-gray-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">PDF Reports</td>
+                        {% for plan in plans %}
+                        <td class="px-6 py-4 text-center {% if plan.is_featured %}bg-primary-50/50 dark:bg-primary-900/10{% endif %}">
+                            {% if plan.export_pdf %}
+                            <svg class="w-5 h-5 text-green-500 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            {% else %}
+                            <svg class="w-5 h-5 text-gray-300 dark:text-gray-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">Multi-Currency</td>
+                        {% for plan in plans %}
+                        <td class="px-6 py-4 text-center {% if plan.is_featured %}bg-primary-50/50 dark:bg-primary-900/10{% endif %}">
+                            {% if plan.multi_currency %}
+                            <svg class="w-5 h-5 text-green-500 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            {% else %}
+                            <svg class="w-5 h-5 text-gray-300 dark:text-gray-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">API Access</td>
+                        {% for plan in plans %}
+                        <td class="px-6 py-4 text-center {% if plan.is_featured %}bg-primary-50/50 dark:bg-primary-900/10{% endif %}">
+                            {% if plan.api_access %}
+                            <svg class="w-5 h-5 text-green-500 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            {% else %}
+                            <svg class="w-5 h-5 text-gray-300 dark:text-gray-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">Priority Support</td>
+                        {% for plan in plans %}
+                        <td class="px-6 py-4 text-center {% if plan.is_featured %}bg-primary-50/50 dark:bg-primary-900/10{% endif %}">
+                            {% if plan.priority_support %}
+                            <svg class="w-5 h-5 text-green-500 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            {% else %}
+                            <svg class="w-5 h-5 text-gray-300 dark:text-gray-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="max-w-3xl mx-auto mb-16">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white text-center mb-8">
+            Frequently Asked Questions
+        </h2>
+
+        <div class="space-y-4" x-data="{ openFaq: null }">
+            <!-- FAQ Item 1 -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <button @click="openFaq = openFaq === 1 ? null : 1"
+                        class="w-full px-6 py-4 text-left flex items-center justify-between">
+                    <span class="font-medium text-gray-900 dark:text-white">Can I change my plan later?</span>
+                    <svg class="w-5 h-5 text-gray-500 transition-transform" :class="{ 'rotate-180': openFaq === 1 }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div x-show="openFaq === 1" x-collapse>
+                    <div class="px-6 pb-4 text-gray-600 dark:text-gray-400">
+                        Yes, you can upgrade or downgrade your plan at any time. When upgrading, you'll be charged the prorated difference. When downgrading, the change takes effect at the end of your current billing period.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 2 -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <button @click="openFaq = openFaq === 2 ? null : 2"
+                        class="w-full px-6 py-4 text-left flex items-center justify-between">
+                    <span class="font-medium text-gray-900 dark:text-white">What payment methods do you accept?</span>
+                    <svg class="w-5 h-5 text-gray-500 transition-transform" :class="{ 'rotate-180': openFaq === 2 }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div x-show="openFaq === 2" x-collapse>
+                    <div class="px-6 pb-4 text-gray-600 dark:text-gray-400">
+                        We accept all major credit and debit cards (Visa, Mastercard, American Express) through our secure payment processor Stripe. SEPA Direct Debit is also available for European customers.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 3 -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <button @click="openFaq = openFaq === 3 ? null : 3"
+                        class="w-full px-6 py-4 text-left flex items-center justify-between">
+                    <span class="font-medium text-gray-900 dark:text-white">Is there a free trial?</span>
+                    <svg class="w-5 h-5 text-gray-500 transition-transform" :class="{ 'rotate-180': openFaq === 3 }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div x-show="openFaq === 3" x-collapse>
+                    <div class="px-6 pb-4 text-gray-600 dark:text-gray-400">
+                        Yes! Our Free plan lets you try the core features indefinitely. For paid plans, we offer a 14-day free trial with full access to all features. No credit card required to start.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 4 -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <button @click="openFaq = openFaq === 4 ? null : 4"
+                        class="w-full px-6 py-4 text-left flex items-center justify-between">
+                    <span class="font-medium text-gray-900 dark:text-white">Can I cancel anytime?</span>
+                    <svg class="w-5 h-5 text-gray-500 transition-transform" :class="{ 'rotate-180': openFaq === 4 }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div x-show="openFaq === 4" x-collapse>
+                    <div class="px-6 pb-4 text-gray-600 dark:text-gray-400">
+                        Absolutely. There are no long-term contracts. You can cancel your subscription at any time from your account settings. You'll continue to have access until the end of your current billing period.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 5 -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <button @click="openFaq = openFaq === 5 ? null : 5"
+                        class="w-full px-6 py-4 text-left flex items-center justify-between">
+                    <span class="font-medium text-gray-900 dark:text-white">What happens to my data if I downgrade?</span>
+                    <svg class="w-5 h-5 text-gray-500 transition-transform" :class="{ 'rotate-180': openFaq === 5 }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div x-show="openFaq === 5" x-collapse>
+                    <div class="px-6 pb-4 text-gray-600 dark:text-gray-400">
+                        Your data is never deleted. If you downgrade to a plan with lower limits, you'll still be able to view all your data, but you may not be able to add new items until you're within the limits of your new plan.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Item 6 -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <button @click="openFaq = openFaq === 6 ? null : 6"
+                        class="w-full px-6 py-4 text-left flex items-center justify-between">
+                    <span class="font-medium text-gray-900 dark:text-white">Do you offer refunds?</span>
+                    <svg class="w-5 h-5 text-gray-500 transition-transform" :class="{ 'rotate-180': openFaq === 6 }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div x-show="openFaq === 6" x-collapse>
+                    <div class="px-6 pb-4 text-gray-600 dark:text-gray-400">
+                        We offer a 30-day money-back guarantee for all paid plans. If you're not satisfied, contact our support team within 30 days of your purchase for a full refund.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA Section -->
+    <div class="bg-gradient-to-r from-primary-600 to-primary-700 rounded-2xl p-8 md:p-12 text-center text-white">
+        <h2 class="text-2xl md:text-3xl font-bold mb-4">
+            Ready to take control of your finances?
+        </h2>
+        <p class="text-primary-100 mb-8 max-w-2xl mx-auto">
+            Join thousands of users who have transformed their financial habits with Pecunia.
+            Start your free trial today.
+        </p>
+        <a href="{% url 'accounts:register' %}"
+           class="inline-flex items-center px-8 py-4 bg-white text-primary-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors">
+            Get Started Free
+            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+            </svg>
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function pricingApp() {
+    return {
+        yearly: false,
+
+        init() {
+            // Check URL params for billing interval
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('interval') === 'year') {
+                this.yearly = true;
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

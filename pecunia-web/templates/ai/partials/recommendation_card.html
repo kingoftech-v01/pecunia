@@ -1,0 +1,105 @@
+<div class="card recommendation-card border-0 shadow-sm priority-{{ recommendation.priority }} {% if recommendation.is_read %}is-read{% endif %}"
+     id="recommendation-{{ recommendation.id }}">
+    <div class="card-body">
+        <div class="d-flex">
+            <!-- Type Icon -->
+            <div class="type-icon type-{{ recommendation.type }} me-3 flex-shrink-0">
+                {% if recommendation.type == 'budget' %}
+                <i class="bi bi-pie-chart"></i>
+                {% elif recommendation.type == 'spending' %}
+                <i class="bi bi-cash-stack"></i>
+                {% elif recommendation.type == 'saving' %}
+                <i class="bi bi-piggy-bank"></i>
+                {% elif recommendation.type == 'anomaly' %}
+                <i class="bi bi-exclamation-diamond"></i>
+                {% elif recommendation.type == 'category' %}
+                <i class="bi bi-tags"></i>
+                {% elif recommendation.type == 'trend' %}
+                <i class="bi bi-graph-up-arrow"></i>
+                {% elif recommendation.type == 'goal' %}
+                <i class="bi bi-bullseye"></i>
+                {% else %}
+                <i class="bi bi-lightbulb"></i>
+                {% endif %}
+            </div>
+
+            <!-- Content -->
+            <div class="flex-grow-1">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h6 class="mb-1">
+                            {{ recommendation.title }}
+                            {% if not recommendation.is_read %}
+                            <span class="badge bg-primary ms-2" style="font-size: 0.65rem;">NEW</span>
+                            {% endif %}
+                        </h6>
+                        <div class="d-flex gap-2 align-items-center">
+                            <span class="badge priority-badge
+                                {% if recommendation.priority == 'urgent' %}bg-danger
+                                {% elif recommendation.priority == 'high' %}bg-warning text-dark
+                                {% elif recommendation.priority == 'medium' %}bg-info text-dark
+                                {% else %}bg-success{% endif %}">
+                                {{ recommendation.get_priority_display }}
+                            </span>
+                            <span class="text-muted small">
+                                {{ recommendation.get_type_display }}
+                            </span>
+                            <span class="text-muted small">
+                                <i class="bi bi-clock me-1"></i>
+                                {{ recommendation.created_at|timesince }} ago
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Actions Dropdown -->
+                    <div class="dropdown">
+                        <button type="button" class="btn btn-sm btn-link text-muted p-0" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            {% if not recommendation.is_read %}
+                            <li>
+                                <button type="button" class="dropdown-item"
+                                        hx-post="{% url 'ai:recommendation-action' recommendation.id %}"
+                                        hx-vals='{"action": "mark_read"}'
+                                        hx-target="#recommendation-{{ recommendation.id }}"
+                                        hx-swap="outerHTML">
+                                    <i class="bi bi-check me-2"></i>Mark as Read
+                                </button>
+                            </li>
+                            {% endif %}
+                            <li>
+                                <button type="button" class="dropdown-item text-danger"
+                                        hx-post="{% url 'ai:recommendation-action' recommendation.id %}"
+                                        hx-vals='{"action": "dismiss"}'
+                                        hx-target="#recommendation-{{ recommendation.id }}"
+                                        hx-swap="outerHTML swap:0.3s"
+                                        hx-confirm="Dismiss this recommendation?">
+                                    <i class="bi bi-x-lg me-2"></i>Dismiss
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <p class="text-muted mb-2">{{ recommendation.content }}</p>
+
+                {% if recommendation.is_actionable and recommendation.metadata.action_url %}
+                <a href="{{ recommendation.metadata.action_url }}" class="btn btn-sm btn-outline-primary">
+                    {{ recommendation.metadata.action_text|default:"Take Action" }}
+                    <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+                {% endif %}
+
+                {% if recommendation.confidence_score %}
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-robot me-1"></i>
+                        Confidence: {{ recommendation.confidence_score|floatformat:0 }}%
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

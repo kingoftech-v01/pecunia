@@ -1,0 +1,956 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if transaction %}Modifier{% else %}Nouvelle{% endif %} Transaction - Pecunia{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/airbnb.css">
+<style>
+    /* Amount input formatting */
+    .amount-input::-webkit-inner-spin-button,
+    .amount-input::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    .amount-input {
+        -moz-appearance: textfield;
+    }
+
+    /* Category autocomplete */
+    .autocomplete-dropdown {
+        max-height: 240px;
+        overflow-y: auto;
+    }
+
+    /* Flatpickr dark mode */
+    .dark .flatpickr-calendar {
+        background: #1f2937;
+        border-color: #374151;
+    }
+    .dark .flatpickr-months .flatpickr-month,
+    .dark .flatpickr-current-month .flatpickr-monthDropdown-months,
+    .dark .flatpickr-weekdays,
+    .dark span.flatpickr-weekday {
+        background: #1f2937;
+        color: #f3f4f6;
+    }
+    .dark .flatpickr-day {
+        color: #f3f4f6;
+    }
+    .dark .flatpickr-day:hover {
+        background: #374151;
+    }
+    .dark .flatpickr-day.selected {
+        background: #0ea5e9;
+        border-color: #0ea5e9;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="transactionForm()" x-init="init()" class="max-w-3xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <nav class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
+            <a href="{% url 'transactions:list' %}" class="hover:text-primary-600 dark:hover:text-primary-400">
+                Transactions
+            </a>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+            <span class="text-gray-900 dark:text-white">{% if transaction %}Modifier{% else %}Nouvelle transaction{% endif %}</span>
+        </nav>
+
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+            {% if transaction %}Modifier la transaction{% else %}Nouvelle transaction{% endif %}
+        </h1>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">
+            {% if transaction %}Modifiez les informations de la transaction{% else %}Ajoutez une nouvelle transaction a votre compte{% endif %}
+        </p>
+    </div>
+
+    <!-- Form -->
+    <form
+        @submit.prevent="submitForm()"
+        class="space-y-6"
+    >
+        <!-- Transaction Type Toggle -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Type de transaction</label>
+            <div class="flex rounded-xl bg-gray-100 dark:bg-gray-700 p-1">
+                <button
+                    type="button"
+                    @click="type = 'expense'"
+                    :class="type === 'expense' ? 'bg-white dark:bg-gray-600 shadow-sm text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'"
+                    class="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-all"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/>
+                    </svg>
+                    Depense
+                </button>
+                <button
+                    type="button"
+                    @click="type = 'income'"
+                    :class="type === 'income' ? 'bg-white dark:bg-gray-600 shadow-sm text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'"
+                    class="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-all"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
+                    </svg>
+                    Revenu
+                </button>
+                <button
+                    type="button"
+                    @click="type = 'transfer'"
+                    :class="type === 'transfer' ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'"
+                    class="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-all"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                    </svg>
+                    Transfert
+                </button>
+            </div>
+        </div>
+
+        <!-- Amount Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Montant</label>
+            <div class="flex items-center gap-4">
+                <div class="flex-1 relative">
+                    <span
+                        :class="type === 'income' ? 'text-green-500' : 'text-red-500'"
+                        class="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold"
+                        x-text="type === 'income' ? '+' : '-'"
+                    ></span>
+                    <input
+                        type="text"
+                        x-model="formattedAmount"
+                        @input="formatAmount($event)"
+                        @blur="validateAmount()"
+                        :class="type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                        class="amount-input w-full pl-10 pr-20 py-4 text-3xl font-bold bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right"
+                        placeholder="0.00"
+                        required
+                    >
+                    <select
+                        x-model="currency"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 bg-transparent border-none text-lg font-medium text-gray-500 dark:text-gray-400 focus:ring-0 cursor-pointer"
+                    >
+                        <option value="EUR">EUR</option>
+                        <option value="USD">USD</option>
+                        <option value="GBP">GBP</option>
+                        <option value="CHF">CHF</option>
+                        <option value="CAD">CAD</option>
+                    </select>
+                </div>
+            </div>
+            <p x-show="amountError" x-text="amountError" class="mt-2 text-sm text-red-500"></p>
+        </div>
+
+        <!-- Main Details -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-5">
+            <!-- Description -->
+            <div>
+                <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Description <span class="text-red-500">*</span>
+                </label>
+                <input
+                    type="text"
+                    id="description"
+                    x-model="description"
+                    @input.debounce.300ms="suggestCategory()"
+                    class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="Ex: Courses au supermarche"
+                    required
+                >
+                <!-- AI Category Suggestion -->
+                <div
+                    x-show="suggestedCategory"
+                    x-transition
+                    class="mt-2 flex items-center gap-2 p-2 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg"
+                >
+                    <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                    <span class="text-sm text-primary-700 dark:text-primary-300">
+                        Categorie suggeree:
+                        <button
+                            type="button"
+                            @click="categoryId = suggestedCategory.id"
+                            class="font-medium underline"
+                            x-text="suggestedCategory.name"
+                        ></button>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Date -->
+            <div>
+                <label for="date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Date <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                    <input
+                        type="text"
+                        id="date"
+                        x-ref="dateInput"
+                        x-model="date"
+                        class="w-full px-4 py-3 pl-11 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        placeholder="Selectionner une date"
+                        required
+                    >
+                    <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Account Selection -->
+            <div>
+                <label for="account" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Compte <span class="text-red-500">*</span>
+                </label>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {% for account in accounts %}
+                    <label
+                        :class="accountId === '{{ account.id }}' ? 'ring-2 ring-primary-500 border-primary-500' : ''"
+                        class="relative flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                    >
+                        <input
+                            type="radio"
+                            name="account"
+                            value="{{ account.id }}"
+                            x-model="accountId"
+                            class="sr-only"
+                        >
+                        <span class="w-10 h-10 rounded-lg bg-white dark:bg-gray-800 flex items-center justify-center text-xl">
+                            {{ account.icon|default:'🏦' }}
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <p class="font-medium text-gray-900 dark:text-white truncate">{{ account.name }}</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ account.balance }} {{ account.currency }}</p>
+                        </div>
+                        <svg
+                            x-show="accountId === '{{ account.id }}'"
+                            class="absolute top-2 right-2 w-5 h-5 text-primary-500"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                        >
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Transfer Target Account (shown only for transfers) -->
+            <div x-show="type === 'transfer'" x-transition>
+                <label for="target_account" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Vers le compte <span class="text-red-500">*</span>
+                </label>
+                <select
+                    id="target_account"
+                    x-model="targetAccountId"
+                    class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                    <option value="">Selectionner un compte</option>
+                    {% for account in accounts %}
+                    <option value="{{ account.id }}">{{ account.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Category -->
+            <div>
+                <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Categorie
+                </label>
+                <div class="relative" x-data="{ open: false, search: '' }">
+                    <button
+                        type="button"
+                        @click="open = !open"
+                        class="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent text-left"
+                    >
+                        <span class="flex items-center gap-2">
+                            <template x-if="categoryId && categories.find(c => c.id === categoryId)">
+                                <span class="flex items-center gap-2">
+                                    <span
+                                        class="w-3 h-3 rounded-full"
+                                        :style="`background-color: ${categories.find(c => c.id === categoryId).color}`"
+                                    ></span>
+                                    <span x-text="categories.find(c => c.id === categoryId).name"></span>
+                                </span>
+                            </template>
+                            <template x-if="!categoryId">
+                                <span class="text-gray-400">Selectionner une categorie</span>
+                            </template>
+                        </span>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <!-- Dropdown -->
+                    <div
+                        x-show="open"
+                        @click.away="open = false"
+                        x-transition
+                        class="absolute z-20 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden"
+                    >
+                        <!-- Search -->
+                        <div class="p-3 border-b border-gray-200 dark:border-gray-700">
+                            <input
+                                type="text"
+                                x-model="search"
+                                placeholder="Rechercher..."
+                                class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+                            >
+                        </div>
+
+                        <!-- Categories List -->
+                        <div class="autocomplete-dropdown py-2">
+                            <button
+                                type="button"
+                                @click="categoryId = ''; open = false"
+                                class="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
+                            >
+                                <span class="w-3 h-3 rounded-full bg-gray-300"></span>
+                                <span class="text-gray-500">Non categorise</span>
+                            </button>
+
+                            <template x-for="category in filteredCategories(search)" :key="category.id">
+                                <button
+                                    type="button"
+                                    @click="categoryId = category.id; open = false"
+                                    :class="categoryId === category.id ? 'bg-primary-50 dark:bg-primary-900/20' : ''"
+                                    class="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
+                                >
+                                    <span
+                                        class="w-3 h-3 rounded-full"
+                                        :style="`background-color: ${category.color}`"
+                                    ></span>
+                                    <span class="flex-1" x-text="category.name"></span>
+                                    <span class="text-xl" x-text="category.icon"></span>
+                                </button>
+                            </template>
+                        </div>
+
+                        <!-- Create New Category -->
+                        <div class="p-3 border-t border-gray-200 dark:border-gray-700">
+                            <button
+                                type="button"
+                                @click="showNewCategoryModal = true; open = false"
+                                class="w-full flex items-center justify-center gap-2 px-4 py-2 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Creer une categorie
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Details -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-5">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Details supplementaires</h3>
+
+            <!-- Reference -->
+            <div>
+                <label for="reference" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Reference
+                </label>
+                <input
+                    type="text"
+                    id="reference"
+                    x-model="reference"
+                    class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono"
+                    placeholder="Ex: INV-2024-001"
+                >
+            </div>
+
+            <!-- Tags -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Tags
+                </label>
+                <div class="flex flex-wrap gap-2 p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl min-h-[48px]">
+                    <template x-for="tag in tags" :key="tag">
+                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 rounded-full text-sm">
+                            <span x-text="tag"></span>
+                            <button type="button" @click="removeTag(tag)" class="hover:text-primary-900">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </span>
+                    </template>
+                    <input
+                        type="text"
+                        x-model="newTag"
+                        @keydown.enter.prevent="addTag()"
+                        @keydown.comma.prevent="addTag()"
+                        placeholder="Ajouter un tag (Entree pour confirmer)..."
+                        class="flex-1 min-w-[150px] bg-transparent border-none focus:outline-none focus:ring-0 text-sm"
+                    >
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div>
+                <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Notes
+                </label>
+                <textarea
+                    id="notes"
+                    x-model="notes"
+                    rows="3"
+                    class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                    placeholder="Ajouter des notes..."
+                ></textarea>
+            </div>
+
+            <!-- Attachments -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pieces jointes
+                </label>
+                <div
+                    @dragover.prevent="isDragging = true"
+                    @dragleave.prevent="isDragging = false"
+                    @drop.prevent="handleDrop($event)"
+                    :class="isDragging ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-300 dark:border-gray-600'"
+                    class="border-2 border-dashed rounded-xl p-6 text-center transition-colors"
+                >
+                    <input
+                        type="file"
+                        multiple
+                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                        @change="handleFiles($event)"
+                        class="hidden"
+                        id="file-upload"
+                    >
+                    <label for="file-upload" class="cursor-pointer">
+                        <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        <p class="text-gray-600 dark:text-gray-400">
+                            <span class="text-primary-600 font-medium">Cliquez pour telecharger</span>
+                            ou glissez-deposez
+                        </p>
+                        <p class="text-sm text-gray-500 mt-1">PNG, JPG, PDF, DOC jusqu'a 10MB</p>
+                    </label>
+                </div>
+
+                <!-- File Preview -->
+                <div x-show="files.length > 0" class="mt-4 space-y-2">
+                    <template x-for="(file, index) in files" :key="index">
+                        <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div class="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                                <svg x-show="file.type.startsWith('image/')" class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <svg x-show="!file.type.startsWith('image/')" class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 dark:text-white truncate" x-text="file.name"></p>
+                                <p class="text-xs text-gray-500" x-text="formatFileSize(file.size)"></p>
+                            </div>
+                            <button
+                                type="button"
+                                @click="removeFile(index)"
+                                class="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Recurring Transaction -->
+            <div>
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        x-model="isRecurring"
+                        class="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    >
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Transaction recurrente</span>
+                </label>
+
+                <!-- Recurring Options -->
+                <div x-show="isRecurring" x-transition class="mt-4 pl-8 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">Frequence</label>
+                            <select
+                                x-model="recurringFrequency"
+                                class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            >
+                                <option value="daily">Quotidien</option>
+                                <option value="weekly">Hebdomadaire</option>
+                                <option value="biweekly">Bi-hebdomadaire</option>
+                                <option value="monthly">Mensuel</option>
+                                <option value="quarterly">Trimestriel</option>
+                                <option value="yearly">Annuel</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">Date de fin</label>
+                            <input
+                                type="text"
+                                x-ref="recurringEndInput"
+                                x-model="recurringEndDate"
+                                placeholder="Optionnel"
+                                class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500"
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex items-center justify-between pt-4">
+            <a
+                href="{% url 'transactions:list' %}"
+                class="px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+            >
+                Annuler
+            </a>
+            <div class="flex items-center gap-3">
+                <button
+                    type="button"
+                    @click="saveAndAddAnother = true; $nextTick(() => $el.closest('form').requestSubmit())"
+                    class="px-6 py-3 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl transition-colors"
+                >
+                    Enregistrer et ajouter
+                </button>
+                <button
+                    type="submit"
+                    :disabled="isSubmitting"
+                    class="px-8 py-3 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                    <svg x-show="isSubmitting" class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span x-text="isSubmitting ? 'Enregistrement...' : '{% if transaction %}Mettre a jour{% else %}Creer{% endif %}'"></span>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- New Category Modal -->
+<div
+    x-show="showNewCategoryModal"
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    @click.self="showNewCategoryModal = false"
+>
+    <div
+        x-show="showNewCategoryModal"
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 scale-95"
+        x-transition:enter-end="opacity-100 scale-100"
+        class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6"
+    >
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Nouvelle categorie</h3>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nom</label>
+                <input
+                    type="text"
+                    x-model="newCategory.name"
+                    class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    placeholder="Ex: Alimentation"
+                >
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Couleur</label>
+                <div class="flex flex-wrap gap-2">
+                    <template x-for="color in ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#14B8A6', '#0EA5E9', '#6366F1', '#A855F7', '#EC4899']" :key="color">
+                        <button
+                            type="button"
+                            @click="newCategory.color = color"
+                            :class="newCategory.color === color ? 'ring-2 ring-offset-2 ring-gray-400' : ''"
+                            :style="`background-color: ${color}`"
+                            class="w-8 h-8 rounded-full"
+                        ></button>
+                    </template>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Icone</label>
+                <div class="flex flex-wrap gap-2">
+                    <template x-for="icon in ['🍔', '🛒', '🏠', '🚗', '💊', '🎬', '📚', '✈️', '💼', '🎁', '💰', '📱']" :key="icon">
+                        <button
+                            type="button"
+                            @click="newCategory.icon = icon"
+                            :class="newCategory.icon === icon ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'bg-gray-50 dark:bg-gray-700'"
+                            class="w-10 h-10 rounded-lg text-xl"
+                            x-text="icon"
+                        ></button>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-6">
+            <button
+                type="button"
+                @click="showNewCategoryModal = false"
+                class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            >
+                Annuler
+            </button>
+            <button
+                type="button"
+                @click="createCategory()"
+                class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+            >
+                Creer
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
+<script>
+function transactionForm() {
+    return {
+        // Form data
+        type: '{{ transaction.type|default:"expense" }}',
+        formattedAmount: '{{ transaction.amount|default:"" }}',
+        amount: {{ transaction.amount|default:"0" }},
+        currency: '{{ transaction.currency|default:"EUR" }}',
+        description: '{{ transaction.description|default:""|escapejs }}',
+        date: '{{ transaction.date|date:"Y-m-d"|default:"" }}',
+        accountId: '{{ transaction.account.id|default:default_account_id|default:"" }}',
+        targetAccountId: '',
+        categoryId: '{{ transaction.category.id|default:"" }}',
+        reference: '{{ transaction.reference|default:""|escapejs }}',
+        notes: '{{ transaction.notes|default:""|escapejs }}',
+        tags: [{% for tag in transaction.tags.all %}'{{ tag.name }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+        newTag: '',
+        files: [],
+        isRecurring: {{ transaction.is_recurring|yesno:"true,false"|default:"false" }},
+        recurringFrequency: '{{ transaction.recurring_frequency|default:"monthly" }}',
+        recurringEndDate: '{{ transaction.recurring_end_date|date:"Y-m-d"|default:"" }}',
+
+        // Categories
+        categories: {{ categories_json|safe|default:"[]" }},
+        suggestedCategory: null,
+
+        // UI State
+        isSubmitting: false,
+        saveAndAddAnother: false,
+        amountError: '',
+        isDragging: false,
+        showNewCategoryModal: false,
+        newCategory: {
+            name: '',
+            color: '#0EA5E9',
+            icon: '📁'
+        },
+
+        // Flatpickr instances
+        datePicker: null,
+        recurringEndPicker: null,
+
+        init() {
+            // Initialize date picker
+            this.datePicker = flatpickr(this.$refs.dateInput, {
+                locale: 'fr',
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: 'd F Y',
+                defaultDate: this.date || new Date(),
+                onChange: (selectedDates, dateStr) => {
+                    this.date = dateStr;
+                }
+            });
+
+            // Initialize recurring end date picker
+            this.$nextTick(() => {
+                if (this.$refs.recurringEndInput) {
+                    this.recurringEndPicker = flatpickr(this.$refs.recurringEndInput, {
+                        locale: 'fr',
+                        dateFormat: 'Y-m-d',
+                        altInput: true,
+                        altFormat: 'd F Y',
+                        minDate: 'today',
+                        onChange: (selectedDates, dateStr) => {
+                            this.recurringEndDate = dateStr;
+                        }
+                    });
+                }
+            });
+
+            // Set default date if empty
+            if (!this.date) {
+                this.date = new Date().toISOString().split('T')[0];
+            }
+        },
+
+        formatAmount(event) {
+            let value = event.target.value.replace(/[^\d.,]/g, '');
+            value = value.replace(',', '.');
+
+            // Allow only one decimal point
+            const parts = value.split('.');
+            if (parts.length > 2) {
+                value = parts[0] + '.' + parts.slice(1).join('');
+            }
+
+            // Limit decimal places
+            if (parts[1] && parts[1].length > 2) {
+                value = parts[0] + '.' + parts[1].substring(0, 2);
+            }
+
+            this.formattedAmount = value;
+            this.amount = parseFloat(value) || 0;
+        },
+
+        validateAmount() {
+            if (!this.amount || this.amount <= 0) {
+                this.amountError = 'Veuillez entrer un montant valide';
+                return false;
+            }
+            this.amountError = '';
+            return true;
+        },
+
+        filteredCategories(search) {
+            if (!search) return this.categories;
+            const searchLower = search.toLowerCase();
+            return this.categories.filter(c =>
+                c.name.toLowerCase().includes(searchLower)
+            );
+        },
+
+        async suggestCategory() {
+            if (this.description.length < 3) {
+                this.suggestedCategory = null;
+                return;
+            }
+
+            try {
+                const response = await fetch('{% url "transactions:suggest_category" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ description: this.description })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.category && data.category.id !== this.categoryId) {
+                        this.suggestedCategory = data.category;
+                    }
+                }
+            } catch (error) {
+                console.error('Category suggestion error:', error);
+            }
+        },
+
+        addTag() {
+            const tag = this.newTag.trim();
+            if (tag && !this.tags.includes(tag)) {
+                this.tags.push(tag);
+            }
+            this.newTag = '';
+        },
+
+        removeTag(tag) {
+            this.tags = this.tags.filter(t => t !== tag);
+        },
+
+        handleDrop(event) {
+            this.isDragging = false;
+            const droppedFiles = event.dataTransfer.files;
+            this.addFiles(droppedFiles);
+        },
+
+        handleFiles(event) {
+            const selectedFiles = event.target.files;
+            this.addFiles(selectedFiles);
+        },
+
+        addFiles(fileList) {
+            for (let file of fileList) {
+                if (file.size <= 10 * 1024 * 1024) { // 10MB limit
+                    this.files.push(file);
+                } else {
+                    Alpine.store('app').addNotification(`${file.name} depasse la limite de 10MB`, 'error');
+                }
+            }
+        },
+
+        removeFile(index) {
+            this.files.splice(index, 1);
+        },
+
+        formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        },
+
+        async createCategory() {
+            if (!this.newCategory.name) return;
+
+            try {
+                const response = await fetch('{% url "categories:create" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify(this.newCategory)
+                });
+
+                if (response.ok) {
+                    const category = await response.json();
+                    this.categories.push(category);
+                    this.categoryId = category.id;
+                    this.showNewCategoryModal = false;
+                    this.newCategory = { name: '', color: '#0EA5E9', icon: '📁' };
+                    Alpine.store('app').addNotification('Categorie creee', 'success');
+                }
+            } catch (error) {
+                Alpine.store('app').addNotification('Erreur lors de la creation', 'error');
+            }
+        },
+
+        async submitForm() {
+            if (!this.validateAmount()) return;
+            if (!this.description.trim()) {
+                Alpine.store('app').addNotification('La description est requise', 'error');
+                return;
+            }
+            if (!this.accountId) {
+                Alpine.store('app').addNotification('Veuillez selectionner un compte', 'error');
+                return;
+            }
+            if (this.type === 'transfer' && !this.targetAccountId) {
+                Alpine.store('app').addNotification('Veuillez selectionner le compte de destination', 'error');
+                return;
+            }
+
+            this.isSubmitting = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('type', this.type);
+                formData.append('amount', this.amount);
+                formData.append('currency', this.currency);
+                formData.append('description', this.description);
+                formData.append('date', this.date);
+                formData.append('account_id', this.accountId);
+                if (this.type === 'transfer') {
+                    formData.append('target_account_id', this.targetAccountId);
+                }
+                if (this.categoryId) {
+                    formData.append('category_id', this.categoryId);
+                }
+                formData.append('reference', this.reference);
+                formData.append('notes', this.notes);
+                formData.append('tags', JSON.stringify(this.tags));
+                formData.append('is_recurring', this.isRecurring);
+                if (this.isRecurring) {
+                    formData.append('recurring_frequency', this.recurringFrequency);
+                    if (this.recurringEndDate) {
+                        formData.append('recurring_end_date', this.recurringEndDate);
+                    }
+                }
+
+                // Add files
+                for (let file of this.files) {
+                    formData.append('attachments', file);
+                }
+
+                const url = {% if transaction %}'{% url "transactions:update" transaction.id %}'{% else %}'{% url "transactions:create" %}'{% endif %};
+                const method = {% if transaction %}'PUT'{% else %}'POST'{% endif %};
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    Alpine.store('app').addNotification(
+                        {% if transaction %}'Transaction mise a jour'{% else %}'Transaction creee'{% endif %},
+                        'success'
+                    );
+
+                    if (this.saveAndAddAnother) {
+                        // Reset form for new entry
+                        this.resetForm();
+                        this.saveAndAddAnother = false;
+                    } else {
+                        window.location.href = '{% url "transactions:list" %}';
+                    }
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Erreur lors de l\'enregistrement');
+                }
+            } catch (error) {
+                Alpine.store('app').addNotification(error.message, 'error');
+            } finally {
+                this.isSubmitting = false;
+            }
+        },
+
+        resetForm() {
+            this.formattedAmount = '';
+            this.amount = 0;
+            this.description = '';
+            this.date = new Date().toISOString().split('T')[0];
+            this.categoryId = '';
+            this.reference = '';
+            this.notes = '';
+            this.tags = [];
+            this.files = [];
+            this.suggestedCategory = null;
+            this.isRecurring = false;
+
+            // Reset date picker
+            if (this.datePicker) {
+                this.datePicker.setDate(new Date());
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

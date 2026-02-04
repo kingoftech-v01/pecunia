@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ budget.name }} - Budgets - Pecunia{% endblock %}
+
+{% block extra_css %}
+<style>
+    .alert-item {
+        animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    .action-btn {
+        transition: all 0.2s ease;
+    }
+    .action-btn:hover {
+        transform: scale(1.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="budgetDetailApp()" x-init="init()">
+    <!-- Breadcrumb -->
+    <nav class="mb-6">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="{% url 'budgets:list' %}" class="text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400">
+                    Budgets
+                </a>
+            </li>
+            <li>
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </li>
+            <li class="text-gray-900 dark:text-white font-medium">{{ budget.name }}</li>
+        </ol>
+    </nav>
+
+    <!-- Header Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
+        <div class="p-6">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ budget.name }}</h1>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                    {% if budget.is_active %}bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400
+                                    {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400{% endif %}">
+                            {% if budget.is_active %}Actif{% else %}Inactif{% endif %}
+                        </span>
+                    </div>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        {{ budget.get_period_display }} &bull;
+                        {{ budget.start_date|date:"d M Y" }} - {{ budget.end_date|date:"d M Y" }}
+                    </p>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center gap-2">
+                    <a href="{% url 'budgets:edit' budget.pk %}"
+                       class="action-btn inline-flex items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Modifier
+                    </a>
+                    <button @click="copyBudget()"
+                            class="action-btn inline-flex items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        Copier
+                    </button>
+                    <button @click="showDeleteModal = true"
+                            class="action-btn inline-flex items-center px-4 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 font-medium rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Supprimer
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200 dark:divide-gray-700 border-t border-gray-200 dark:border-gray-700">
+            <div class="p-6 text-center">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Budget Total</p>
+                <p class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{{ budget.total_amount }} &euro;</p>
+            </div>
+            <div class="p-6 text-center">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Depense</p>
+                <p class="mt-2 text-3xl font-bold text-orange-600 dark:text-orange-400">{{ budget.total_spent }} &euro;</p>
+            </div>
+            <div class="p-6 text-center">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Restant</p>
+                <p class="mt-2 text-3xl font-bold {% if budget.remaining >= 0 %}text-green-600 dark:text-green-400{% else %}text-red-600 dark:text-red-400{% endif %}">
+                    {{ budget.remaining }} &euro;
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column - Items List -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Budget Items -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                <div class="p-5 border-b border-gray-200 dark:border-gray-700">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Categories du Budget</h2>
+                </div>
+                <div id="budget-items" class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for item in budget.items.all %}
+                        {% include "budgets/partials/budget_item_row.html" with item=item %}
+                    {% empty %}
+                    <div class="p-8 text-center">
+                        <p class="text-gray-500 dark:text-gray-400">Aucune categorie configuree</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Alert History -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                <div class="p-5 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Historique des Alertes</h2>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                            {{ alerts.count }} alertes
+                        </span>
+                    </div>
+                </div>
+                <div class="divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto">
+                    {% for alert in alerts %}
+                    <div class="alert-item p-4 flex items-start gap-4">
+                        <div class="flex-shrink-0">
+                            {% if alert.level == 'warning' %}
+                            <div class="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                            </div>
+                            {% elif alert.level == 'danger' %}
+                            <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            {% else %}
+                            <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ alert.message }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                {{ alert.category.name }} &bull; {{ alert.created_at|timesince }} ago
+                            </p>
+                        </div>
+                        <button @click="dismissAlert({{ alert.pk }})"
+                                hx-post="{% url 'budgets:dismiss_alert' alert.pk %}"
+                                hx-swap="outerHTML"
+                                class="flex-shrink-0 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    {% empty %}
+                    <div class="p-8 text-center">
+                        <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p class="mt-4 text-gray-500 dark:text-gray-400">Aucune alerte</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Chart & Info -->
+        <div class="space-y-6">
+            <!-- Pie Chart -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Repartition par Categorie</h2>
+                {% include "budgets/partials/budget_chart.html" with budget=budget %}
+            </div>
+
+            <!-- Overall Progress -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Progression Globale</h2>
+                {% include "budgets/partials/budget_progress.html" with budget=budget show_details=True %}
+            </div>
+
+            <!-- Budget Info -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Informations</h2>
+                <dl class="space-y-3">
+                    <div class="flex justify-between">
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Cree le</dt>
+                        <dd class="text-sm font-medium text-gray-900 dark:text-white">{{ budget.created_at|date:"d M Y" }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Modifie le</dt>
+                        <dd class="text-sm font-medium text-gray-900 dark:text-white">{{ budget.updated_at|date:"d M Y" }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Categories</dt>
+                        <dd class="text-sm font-medium text-gray-900 dark:text-white">{{ budget.items.count }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Alertes actives</dt>
+                        <dd class="text-sm font-medium text-gray-900 dark:text-white">{{ budget.active_alerts_count }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Jours restants</dt>
+                        <dd class="text-sm font-medium text-gray-900 dark:text-white">{{ budget.days_remaining }}</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div x-show="showDeleteModal"
+         x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 dark:bg-gray-900 bg-opacity-75 dark:bg-opacity-75" @click="showDeleteModal = false"></div>
+
+            <div class="relative bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100">
+                <div class="p-6">
+                    <div class="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full mb-4">
+                        <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-medium text-center text-gray-900 dark:text-white mb-2">Supprimer ce budget ?</h3>
+                    <p class="text-sm text-center text-gray-500 dark:text-gray-400">
+                        Cette action est irreversible. Toutes les donnees associees a ce budget seront supprimees.
+                    </p>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-700/50 px-6 py-4 flex flex-col sm:flex-row-reverse gap-3">
+                    <form method="post" action="{% url 'budgets:delete' budget.pk %}">
+                        {% csrf_token %}
+                        <button type="submit"
+                                class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors">
+                            Supprimer
+                        </button>
+                    </form>
+                    <button @click="showDeleteModal = false"
+                            class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                        Annuler
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Copy Budget Modal -->
+    <div x-show="showCopyModal"
+         x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 dark:bg-gray-900 bg-opacity-75 dark:bg-opacity-75" @click="showCopyModal = false"></div>
+
+            <div class="relative bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full">
+                <form method="post" action="{% url 'budgets:copy' budget.pk %}">
+                    {% csrf_token %}
+                    <div class="p-6">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Copier ce budget</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nom du nouveau budget</label>
+                                <input type="text"
+                                       name="name"
+                                       x-model="copyName"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox"
+                                       name="copy_amounts"
+                                       id="copy_amounts"
+                                       checked
+                                       class="w-4 h-4 text-primary-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500">
+                                <label for="copy_amounts" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                                    Copier les montants alloues
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700/50 px-6 py-4 flex flex-col sm:flex-row-reverse gap-3">
+                        <button type="submit"
+                                class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
+                            Creer la copie
+                        </button>
+                        <button type="button"
+                                @click="showCopyModal = false"
+                                class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                            Annuler
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function budgetDetailApp() {
+    return {
+        showDeleteModal: false,
+        showCopyModal: false,
+        copyName: '{{ budget.name }} (copie)',
+
+        init() {
+            // Initialize any needed functionality
+        },
+
+        copyBudget() {
+            this.showCopyModal = true;
+        },
+
+        dismissAlert(alertId) {
+            // Handled by HTMX
+        }
+    }
+}
+</script>
+{% endblock %}

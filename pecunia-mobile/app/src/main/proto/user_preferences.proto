@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+option java_package = "com.pecunia.data.local.preferences";
+option java_multiple_files = true;
+
+/**
+ * Proto schema for user preferences storage.
+ * Used with Proto DataStore for type-safe persistent storage.
+ *
+ * Note: Sensitive tokens are NOT stored here - they use EncryptedSharedPreferences.
+ */
+message UserPreferencesProto {
+    // Authentication state
+    bool is_logged_in = 1;
+    string user_id = 2;
+    string email = 3;
+
+    // App settings
+    Theme theme = 4;
+    Language language = 5;
+    bool notifications_enabled = 6;
+    bool biometric_enabled = 7;
+
+    // Sync state
+    int64 last_sync_timestamp = 8;
+
+    // Onboarding
+    bool onboarding_completed = 9;
+}
+
+/**
+ * Theme preference options
+ */
+enum Theme {
+    THEME_UNSPECIFIED = 0;
+    THEME_LIGHT = 1;
+    THEME_DARK = 2;
+    THEME_SYSTEM = 3;
+}
+
+/**
+ * Supported language options
+ */
+enum Language {
+    LANGUAGE_UNSPECIFIED = 0;
+    LANGUAGE_FRENCH = 1;
+    LANGUAGE_ENGLISH = 2;
+}

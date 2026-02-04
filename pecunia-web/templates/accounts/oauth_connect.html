@@ -1,0 +1,605 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Se connecter - Pecunia{% endblock %}
+
+{% block extra_css %}
+<style>
+    .oauth-container {
+        max-width: 420px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .oauth-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .oauth-header h1 {
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: #1a1a2e;
+        margin-bottom: 0.5rem;
+    }
+
+    .oauth-header p {
+        color: #6b7280;
+        font-size: 0.95rem;
+    }
+
+    .oauth-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .oauth-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        width: 100%;
+        padding: 0.875rem 1.5rem;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        border: none;
+        position: relative;
+    }
+
+    .oauth-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    .oauth-btn .btn-icon {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+    }
+
+    .oauth-btn .btn-text {
+        flex: 1;
+        text-align: center;
+    }
+
+    /* Google Button */
+    .oauth-btn-google {
+        background-color: #ffffff;
+        color: #1f2937;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .oauth-btn-google:hover:not(:disabled) {
+        background-color: #f9fafb;
+        border-color: #d1d5db;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .oauth-btn-google:active:not(:disabled) {
+        background-color: #f3f4f6;
+    }
+
+    /* Apple Button */
+    .oauth-btn-apple {
+        background-color: #000000;
+        color: #ffffff;
+    }
+
+    .oauth-btn-apple:hover:not(:disabled) {
+        background-color: #1a1a1a;
+    }
+
+    .oauth-btn-apple:active:not(:disabled) {
+        background-color: #333333;
+    }
+
+    /* Loading State */
+    .oauth-btn.loading .btn-text {
+        opacity: 0;
+    }
+
+    .oauth-btn.loading::after {
+        content: '';
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border: 2px solid transparent;
+        border-top-color: currentColor;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Linked Account Badge */
+    .oauth-btn .linked-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.75rem;
+        color: #059669;
+        background-color: #d1fae5;
+        padding: 0.125rem 0.5rem;
+        border-radius: 9999px;
+    }
+
+    .oauth-btn-apple .linked-badge {
+        color: #ffffff;
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Divider */
+    .oauth-divider {
+        display: flex;
+        align-items: center;
+        margin: 1.5rem 0;
+    }
+
+    .oauth-divider::before,
+    .oauth-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background-color: #e5e7eb;
+    }
+
+    .oauth-divider span {
+        padding: 0 1rem;
+        color: #9ca3af;
+        font-size: 0.875rem;
+    }
+
+    /* Error Alert */
+    .oauth-error {
+        background-color: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .oauth-error-icon {
+        flex-shrink: 0;
+        width: 20px;
+        height: 20px;
+        color: #dc2626;
+    }
+
+    .oauth-error-content {
+        flex: 1;
+    }
+
+    .oauth-error-title {
+        font-weight: 500;
+        color: #991b1b;
+        margin-bottom: 0.25rem;
+    }
+
+    .oauth-error-message {
+        color: #b91c1c;
+        font-size: 0.875rem;
+    }
+
+    .oauth-error-close {
+        background: none;
+        border: none;
+        color: #dc2626;
+        cursor: pointer;
+        padding: 0.25rem;
+        margin: -0.25rem;
+        border-radius: 0.25rem;
+    }
+
+    .oauth-error-close:hover {
+        background-color: #fee2e2;
+    }
+
+    /* Info Message */
+    .oauth-info {
+        background-color: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .oauth-info-icon {
+        flex-shrink: 0;
+        width: 20px;
+        height: 20px;
+        color: #2563eb;
+    }
+
+    .oauth-info-content {
+        color: #1e40af;
+        font-size: 0.875rem;
+    }
+
+    /* Footer Links */
+    .oauth-footer {
+        margin-top: 2rem;
+        text-align: center;
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    .oauth-footer a {
+        color: #4f46e5;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .oauth-footer a:hover {
+        text-decoration: underline;
+    }
+
+    /* Unlink Button */
+    .unlink-btn {
+        background: none;
+        border: none;
+        color: #dc2626;
+        font-size: 0.75rem;
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        margin-left: auto;
+    }
+
+    .unlink-btn:hover {
+        background-color: #fef2f2;
+    }
+
+    /* Account Card for linked view */
+    .account-card {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        background-color: #f9fafb;
+        border-radius: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .account-card-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+    }
+
+    .account-card-icon.google {
+        background-color: #ffffff;
+        border: 1px solid #e5e7eb;
+    }
+
+    .account-card-icon.apple {
+        background-color: #000000;
+    }
+
+    .account-card-info {
+        flex: 1;
+    }
+
+    .account-card-provider {
+        font-weight: 500;
+        color: #1f2937;
+    }
+
+    .account-card-email {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    .account-card-status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="oauth-container">
+    <div class="oauth-header">
+        {% if user.is_authenticated %}
+            <h1>Comptes connectes</h1>
+            <p>Gerez vos connexions avec les services tiers</p>
+        {% else %}
+            <h1>Connexion</h1>
+            <p>Connectez-vous avec votre compte</p>
+        {% endif %}
+    </div>
+
+    <!-- Error Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            {% if message.tags == 'error' %}
+                <div class="oauth-error" role="alert">
+                    <svg class="oauth-error-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div class="oauth-error-content">
+                        <div class="oauth-error-title">Erreur</div>
+                        <div class="oauth-error-message">{{ message }}</div>
+                    </div>
+                    <button type="button" class="oauth-error-close" onclick="this.parentElement.remove()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            {% elif message.tags == 'info' %}
+                <div class="oauth-info" role="alert">
+                    <svg class="oauth-info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div class="oauth-info-content">{{ message }}</div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    {% if user.is_authenticated %}
+        <!-- Linked Accounts View -->
+        <div class="linked-accounts">
+            <!-- Google Account -->
+            <div class="account-card">
+                <div class="account-card-icon google">
+                    <svg width="20" height="20" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                </div>
+                <div class="account-card-info">
+                    <div class="account-card-provider">Google</div>
+                    {% if linked_accounts.google %}
+                        <div class="account-card-email">{{ linked_accounts.google.extra_data.email }}</div>
+                    {% else %}
+                        <div class="account-card-email">Non connecte</div>
+                    {% endif %}
+                </div>
+                <div class="account-card-status">
+                    {% if linked_accounts.google %}
+                        <span class="linked-badge">
+                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Connecte
+                        </span>
+                        <form method="post" action="{% url 'accounts:unlink_account' provider='google' %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="unlink-btn" onclick="return confirm('Deconnecter ce compte Google ?')">
+                                Deconnecter
+                            </button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'accounts:link_account' provider='google' %}" class="oauth-btn oauth-btn-google" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                            Connecter
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Apple Account -->
+            <div class="account-card">
+                <div class="account-card-icon apple">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff">
+                        <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                    </svg>
+                </div>
+                <div class="account-card-info">
+                    <div class="account-card-provider">Apple</div>
+                    {% if linked_accounts.apple %}
+                        <div class="account-card-email">{{ linked_accounts.apple.extra_data.email|default:"Compte Apple" }}</div>
+                    {% else %}
+                        <div class="account-card-email">Non connecte</div>
+                    {% endif %}
+                </div>
+                <div class="account-card-status">
+                    {% if linked_accounts.apple %}
+                        <span class="linked-badge" style="background-color: #d1fae5;">
+                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Connecte
+                        </span>
+                        <form method="post" action="{% url 'accounts:unlink_account' provider='apple' %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="unlink-btn" onclick="return confirm('Deconnecter ce compte Apple ?')">
+                                Deconnecter
+                            </button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'accounts:link_account' provider='apple' %}" class="oauth-btn oauth-btn-apple" style="padding: 0.5rem 1rem; font-size: 0.875rem; color: #fff;">
+                            Connecter
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if not has_password %}
+            <div class="oauth-info" style="margin-top: 1.5rem;">
+                <svg class="oauth-info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div class="oauth-info-content">
+                    Vous n'avez pas de mot de passe defini. <a href="{% url 'accounts:set_password' %}">Definir un mot de passe</a> pour pouvoir vous connecter sans compte social.
+                </div>
+            </div>
+        {% endif %}
+
+    {% else %}
+        <!-- Login Buttons -->
+        <div class="oauth-buttons">
+            <!-- Google Sign-In Button -->
+            <a href="{% url 'accounts:oauth_redirect' provider='google' %}{% if next %}?next={{ next|urlencode }}{% endif %}"
+               class="oauth-btn oauth-btn-google"
+               id="google-signin-btn"
+               onclick="handleOAuthClick(this, 'Google')">
+                <svg class="btn-icon" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                <span class="btn-text">Continuer avec Google</span>
+            </a>
+
+            <!-- Apple Sign-In Button -->
+            <a href="{% url 'accounts:oauth_redirect' provider='apple' %}{% if next %}?next={{ next|urlencode }}{% endif %}"
+               class="oauth-btn oauth-btn-apple"
+               id="apple-signin-btn"
+               onclick="handleOAuthClick(this, 'Apple')">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                </svg>
+                <span class="btn-text">Continuer avec Apple</span>
+            </a>
+        </div>
+
+        <div class="oauth-divider">
+            <span>ou</span>
+        </div>
+
+        <div class="oauth-buttons">
+            <a href="{% url 'accounts:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}"
+               class="oauth-btn oauth-btn-google">
+                <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                </svg>
+                <span class="btn-text">Continuer avec Email</span>
+            </a>
+        </div>
+
+        <div class="oauth-footer">
+            <p>
+                Pas encore de compte ?
+                <a href="{% url 'accounts:signup' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Creer un compte</a>
+            </p>
+            <p style="margin-top: 1rem; font-size: 0.75rem; color: #9ca3af;">
+                En continuant, vous acceptez nos
+                <a href="{% url 'legal:terms' %}">Conditions d'utilisation</a>
+                et notre
+                <a href="{% url 'legal:privacy' %}">Politique de confidentialite</a>.
+            </p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    /**
+     * Handle OAuth button click with loading state
+     */
+    function handleOAuthClick(button, provider) {
+        // Prevent double-clicks
+        if (button.classList.contains('loading')) {
+            return false;
+        }
+
+        // Add loading state
+        button.classList.add('loading');
+        button.setAttribute('disabled', 'disabled');
+
+        // Update button text
+        const textSpan = button.querySelector('.btn-text');
+        if (textSpan) {
+            textSpan.dataset.originalText = textSpan.textContent;
+            textSpan.textContent = 'Connexion en cours...';
+        }
+
+        // Remove loading state after timeout (in case of redirect failure)
+        setTimeout(() => {
+            button.classList.remove('loading');
+            button.removeAttribute('disabled');
+            if (textSpan && textSpan.dataset.originalText) {
+                textSpan.textContent = textSpan.dataset.originalText;
+            }
+        }, 10000);
+
+        return true;
+    }
+
+    /**
+     * Handle OAuth errors from URL params
+     */
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const error = urlParams.get('error');
+
+        if (error) {
+            // Error is already displayed via Django messages
+            // Clean URL
+            const url = new URL(window.location.href);
+            url.searchParams.delete('error');
+            url.searchParams.delete('error_description');
+            window.history.replaceState({}, document.title, url.pathname + url.search);
+        }
+    });
+
+    /**
+     * Unlink account with AJAX
+     */
+    document.querySelectorAll('.unlink-form').forEach(form => {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            if (!confirm('Etes-vous sur de vouloir deconnecter ce compte ?')) {
+                return;
+            }
+
+            const button = form.querySelector('button');
+            const originalText = button.textContent;
+            button.textContent = 'Deconnexion...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Reload page to show updated state
+                    window.location.reload();
+                } else {
+                    alert(data.message || 'Une erreur est survenue');
+                    button.textContent = originalText;
+                    button.disabled = false;
+                }
+            } catch (error) {
+                alert('Une erreur est survenue');
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        });
+    });
+</script>
+{% endblock %}

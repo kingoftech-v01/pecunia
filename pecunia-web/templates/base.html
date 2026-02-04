@@ -1,0 +1,312 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', sidebarOpen: false }" :class="{ 'dark': darkMode }">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="{% block meta_description %}Pecunia - Personal Finance Management SaaS{% endblock %}">
+    <meta name="keywords" content="finance, budget, expense tracking, savings, investments">
+    <meta name="author" content="Pecunia">
+    <meta name="robots" content="index, follow">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{% block og_title %}Pecunia{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Take control of your finances{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{% static 'images/og-image.png' %}{% endblock %}">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{% static 'images/favicon.svg' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'images/apple-touch-icon.png' %}">
+
+    <title>{% block title %}Pecunia{% endblock %} | Financial Management</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                            950: '#082f49',
+                        },
+                        accent: {
+                            50: '#fdf4ff',
+                            100: '#fae8ff',
+                            200: '#f5d0fe',
+                            300: '#f0abfc',
+                            400: '#e879f9',
+                            500: '#d946ef',
+                            600: '#c026d3',
+                            700: '#a21caf',
+                            800: '#86198f',
+                            900: '#701a75',
+                            950: '#4a044e',
+                        },
+                        success: {
+                            50: '#f0fdf4',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                        },
+                        warning: {
+                            50: '#fffbeb',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        },
+                        danger: {
+                            50: '#fef2f2',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                        'slide-in': 'slideIn 0.3s ease-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'bounce-in': 'bounceIn 0.5s ease-out',
+                        'pulse-slow': 'pulse 3s infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideIn: {
+                            '0%': { opacity: '0', transform: 'translateX(-10px)' },
+                            '100%': { opacity: '1', transform: 'translateX(0)' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        bounceIn: {
+                            '0%': { opacity: '0', transform: 'scale(0.9)' },
+                            '50%': { transform: 'scale(1.02)' },
+                            '100%': { opacity: '1', transform: 'scale(1)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/loading-states.js"></script>
+
+    <!-- Alpine.js Plugins -->
+    <script defer src="https://unpkg.com/@alpinejs/focus@3.13.3/dist/cdn.min.js"></script>
+    <script defer src="https://unpkg.com/@alpinejs/collapse@3.13.3/dist/cdn.min.js"></script>
+
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+
+    {% block head %}{% endblock %}
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans antialiased transition-colors duration-200"
+      hx-ext="loading-states">
+
+    <!-- Skip to main content (accessibility) -->
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary-600 text-white px-4 py-2 rounded-md z-50">
+        Skip to main content
+    </a>
+
+    {% block layout %}
+    <!-- Default Layout with Navbar -->
+    <div class="flex flex-col min-h-screen">
+        <!-- Navigation -->
+        {% include "partials/navbar.html" %}
+
+        <!-- Toast Notifications -->
+        {% include "partials/messages.html" %}
+
+        <!-- Main Content Area -->
+        <div class="flex flex-1">
+            {% block sidebar %}{% endblock %}
+
+            <!-- Main Content -->
+            <main id="main-content" class="flex-1 container mx-auto px-4 py-8">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+
+        <!-- Footer -->
+        {% include "partials/footer.html" %}
+    </div>
+    {% endblock %}
+
+    <!-- Modal Container -->
+    <div id="modal-container"></div>
+
+    <!-- Toast Container for HTMX responses -->
+    <div id="htmx-toast-container"></div>
+
+    <!-- HTMX Configuration -->
+    <script>
+        // CSRF Token for HTMX requests
+        document.body.addEventListener('htmx:configRequest', (event) => {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]');
+            if (csrfToken) {
+                event.detail.headers['X-CSRFToken'] = csrfToken.getAttribute('content');
+            }
+        });
+
+        // Loading state management
+        document.body.addEventListener('htmx:beforeRequest', (event) => {
+            const target = event.detail.elt;
+            if (target.dataset.loadingDisable !== undefined) {
+                target.disabled = true;
+                target.classList.add('opacity-50', 'cursor-wait');
+            }
+        });
+
+        document.body.addEventListener('htmx:afterRequest', (event) => {
+            const target = event.detail.elt;
+            if (target.dataset.loadingDisable !== undefined) {
+                target.disabled = false;
+                target.classList.remove('opacity-50', 'cursor-wait');
+            }
+        });
+
+        // Handle HTMX errors globally
+        document.body.addEventListener('htmx:responseError', (event) => {
+            console.error('HTMX Error:', event.detail);
+            window.dispatchEvent(new CustomEvent('toast', {
+                detail: {
+                    message: 'An error occurred. Please try again.',
+                    type: 'error'
+                }
+            }));
+        });
+
+        // Handle successful HTMX responses with toast messages
+        document.body.addEventListener('htmx:afterSwap', (event) => {
+            const response = event.detail.xhr;
+            const toastMessage = response.getResponseHeader('HX-Toast-Message');
+            const toastType = response.getResponseHeader('HX-Toast-Type') || 'success';
+
+            if (toastMessage) {
+                window.dispatchEvent(new CustomEvent('toast', {
+                    detail: { message: toastMessage, type: toastType }
+                }));
+            }
+        });
+    </script>
+
+    <!-- Alpine.js Global Store and Components -->
+    <script>
+        document.addEventListener('alpine:init', () => {
+            // Global App Store
+            Alpine.store('app', {
+                sidebarOpen: window.innerWidth >= 1024,
+                notifications: [],
+                user: null,
+
+                init() {
+                    // Listen for window resize
+                    window.addEventListener('resize', () => {
+                        if (window.innerWidth >= 1024) {
+                            this.sidebarOpen = true;
+                        }
+                    });
+                },
+
+                toggleSidebar() {
+                    this.sidebarOpen = !this.sidebarOpen;
+                },
+
+                addNotification(message, type = 'info', duration = 5000) {
+                    const id = Date.now();
+                    this.notifications.push({ id, message, type });
+                    if (duration > 0) {
+                        setTimeout(() => this.removeNotification(id), duration);
+                    }
+                    return id;
+                },
+
+                removeNotification(id) {
+                    this.notifications = this.notifications.filter(n => n.id !== id);
+                }
+            });
+
+            // Modal Component
+            Alpine.data('modal', (config = {}) => ({
+                open: false,
+                title: config.title || '',
+
+                show() {
+                    this.open = true;
+                    document.body.classList.add('overflow-hidden');
+                },
+
+                close() {
+                    this.open = false;
+                    document.body.classList.remove('overflow-hidden');
+                },
+
+                toggle() {
+                    this.open ? this.close() : this.show();
+                }
+            }));
+
+            // Dropdown Component
+            Alpine.data('dropdown', () => ({
+                open: false,
+
+                toggle() {
+                    this.open = !this.open;
+                },
+
+                close() {
+                    this.open = false;
+                }
+            }));
+
+            // Tabs Component
+            Alpine.data('tabs', (defaultTab = '') => ({
+                activeTab: defaultTab,
+
+                isActive(tab) {
+                    return this.activeTab === tab;
+                },
+
+                setActive(tab) {
+                    this.activeTab = tab;
+                }
+            }));
+        });
+    </script>
+
+    <!-- Custom JavaScript -->
+    <script src="{% static 'js/app.js' %}"></script>
+
+    {% block scripts %}{% endblock %}
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

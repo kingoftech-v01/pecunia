@@ -1,0 +1,245 @@
+<!-- Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="text-muted mb-1">Total Income</h6>
+                <h3 class="mb-0 text-success">${{ insights.total_income|floatformat:2 }}</h3>
+                {% if insights.income_change %}
+                <small class="{% if insights.income_change >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    <i class="bi bi-arrow-{% if insights.income_change >= 0 %}up{% else %}down{% endif %}"></i>
+                    {{ insights.income_change|floatformat:1 }}% vs prev
+                </small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="text-muted mb-1">Total Expenses</h6>
+                <h3 class="mb-0 text-danger">${{ insights.total_expenses|floatformat:2 }}</h3>
+                {% if insights.expense_change %}
+                <small class="{% if insights.expense_change <= 0 %}text-success{% else %}text-danger{% endif %}">
+                    <i class="bi bi-arrow-{% if insights.expense_change >= 0 %}up{% else %}down{% endif %}"></i>
+                    {{ insights.expense_change|floatformat:1 }}% vs prev
+                </small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="text-muted mb-1">Net Savings</h6>
+                <h3 class="mb-0 {% if insights.net_savings >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                    ${{ insights.net_savings|floatformat:2 }}
+                </h3>
+                {% if insights.savings_change %}
+                <small class="{% if insights.savings_change >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    <i class="bi bi-arrow-{% if insights.savings_change >= 0 %}up{% else %}down{% endif %}"></i>
+                    {{ insights.savings_change|floatformat:1 }}% vs prev
+                </small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="text-muted mb-1">Savings Rate</h6>
+                <h3 class="mb-0">{{ insights.savings_rate|floatformat:1 }}%</h3>
+                <div class="progress mt-2" style="height: 6px;">
+                    <div class="progress-bar {% if insights.savings_rate >= 20 %}bg-success{% elif insights.savings_rate >= 10 %}bg-warning{% else %}bg-danger{% endif %}"
+                         role="progressbar"
+                         style="width: {{ insights.savings_rate|floatformat:0 }}%"
+                         aria-valuenow="{{ insights.savings_rate }}"
+                         aria-valuemin="0"
+                         aria-valuemax="100"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Summary -->
+{% if insights.ai_summary %}
+<div class="card border-0 shadow-sm mb-4 bg-light">
+    <div class="card-body">
+        <div class="d-flex align-items-start">
+            <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-3">
+                <i class="bi bi-robot text-primary"></i>
+            </div>
+            <div>
+                <h6 class="mb-2">AI Summary</h6>
+                <p class="mb-0">{{ insights.ai_summary }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <!-- Category Breakdown Chart -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="mb-0">
+                    <i class="bi bi-pie-chart me-2"></i>Spending by Category
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if insights.categories %}
+                <canvas id="categoryChart" height="250"></canvas>
+                <div class="mt-3">
+                    {% for cat in insights.categories %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center">
+                            <span class="badge rounded-pill me-2" style="background-color: {{ cat.color }}; width: 10px; height: 10px;"></span>
+                            <span>{{ cat.name }}</span>
+                        </div>
+                        <div>
+                            <span class="fw-bold">${{ cat.amount|floatformat:2 }}</span>
+                            <span class="text-muted ms-2">({{ cat.percentage|floatformat:1 }}%)</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-pie-chart fs-1 opacity-25"></i>
+                    <p class="mt-2">No expense data available</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Spending Trend -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Daily Spending Trend
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if insights.daily_spending %}
+                <canvas id="trendChart" height="250"></canvas>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-graph-up fs-1 opacity-25"></i>
+                    <p class="mt-2">No spending data available</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Recommendations -->
+{% if recommendations %}
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">
+            <i class="bi bi-lightbulb me-2"></i>AI Recommendations
+        </h6>
+        <a href="{% url 'ai:recommendations' %}" class="btn btn-sm btn-link">View All</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+            {% for rec in recommendations %}
+            <div class="list-group-item">
+                <div class="d-flex align-items-start">
+                    <span class="badge
+                        {% if rec.priority == 'urgent' %}bg-danger
+                        {% elif rec.priority == 'high' %}bg-warning text-dark
+                        {% else %}bg-info text-dark{% endif %} me-3">
+                        {{ rec.get_priority_display }}
+                    </span>
+                    <div>
+                        <h6 class="mb-1">{{ rec.title }}</h6>
+                        <p class="text-muted mb-0 small">{{ rec.content|truncatechars:100 }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Chart.js Data -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if insights.categories %}
+    // Category Pie Chart
+    const categoryCtx = document.getElementById('categoryChart');
+    if (categoryCtx) {
+        new Chart(categoryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [{% for cat in insights.categories %}'{{ cat.name }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for cat in insights.categories %}{{ cat.amount }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: [{% for cat in insights.categories %}'{{ cat.color }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+    }
+    {% endif %}
+
+    {% if insights.daily_spending %}
+    // Daily Trend Line Chart
+    const trendCtx = document.getElementById('trendChart');
+    if (trendCtx) {
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: [{% for day in insights.daily_spending %}'{{ day.label }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Spending',
+                    data: [{% for day in insights.daily_spending %}{{ day.amount }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+});
+</script>

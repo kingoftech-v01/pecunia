@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Checkout - {{ plan.name }} - Pecunia{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stripe-element {
+        padding: 12px 16px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: white;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .dark .stripe-element {
+        background: #374151;
+        border-color: #4b5563;
+    }
+    .stripe-element:focus-within {
+        border-color: #0ea5e9;
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+    }
+    .stripe-element.error {
+        border-color: #ef4444;
+    }
+    .checkout-summary {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    }
+    .dark .checkout-summary {
+        background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    }
+    .secure-badge {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+    .loading-overlay {
+        backdrop-filter: blur(4px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="checkoutApp()" class="max-w-4xl mx-auto">
+    <!-- Back Link -->
+    <a href="{% url 'frontend:subscriptions:pricing' %}"
+       class="inline-flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-6 transition-colors">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Back to pricing
+    </a>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Checkout Form -->
+        <div class="order-2 lg:order-1">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Complete your purchase</h1>
+                    <p class="text-gray-500 dark:text-gray-400 mt-1">You're subscribing to {{ plan.name }}</p>
+                </div>
+
+                <form method="POST"
+                      action="{% url 'frontend:subscriptions:checkout' plan.id %}"
+                      @submit="handleSubmit($event)"
+                      class="p-6 space-y-6">
+                    {% csrf_token %}
+
+                    <!-- Billing Interval Selection -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                            Billing Period
+                        </label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="relative cursor-pointer">
+                                <input type="radio"
+                                       name="billing_interval"
+                                       value="month"
+                                       x-model="billingInterval"
+                                       class="peer sr-only">
+                                <div class="p-4 border-2 rounded-xl transition-all
+                                            peer-checked:border-primary-500 peer-checked:bg-primary-50 dark:peer-checked:bg-primary-900/20
+                                            border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500">
+                                    <div class="font-semibold text-gray-900 dark:text-white">Monthly</div>
+                                    <div class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                                        {{ plan.price_monthly }}&euro;<span class="text-sm font-normal text-gray-500">/month</span>
+                                    </div>
+                                </div>
+                                <div class="absolute top-3 right-3 hidden peer-checked:block">
+                                    <svg class="w-5 h-5 text-primary-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
+                            </label>
+
+                            <label class="relative cursor-pointer">
+                                <input type="radio"
+                                       name="billing_interval"
+                                       value="year"
+                                       x-model="billingInterval"
+                                       class="peer sr-only">
+                                <div class="p-4 border-2 rounded-xl transition-all
+                                            peer-checked:border-primary-500 peer-checked:bg-primary-50 dark:peer-checked:bg-primary-900/20
+                                            border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-900 dark:text-white">Yearly</span>
+                                        {% if plan.yearly_savings > 0 %}
+                                        <span class="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold rounded-full">
+                                            Save {{ plan.yearly_savings }}%
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                                        {{ plan.price_yearly }}&euro;<span class="text-sm font-normal text-gray-500">/year</span>
+                                    </div>
+                                </div>
+                                <div class="absolute top-3 right-3 hidden peer-checked:block">
+                                    <svg class="w-5 h-5 text-primary-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Stripe Card Element Placeholder -->
+                    <div id="stripe-card-section" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                            Payment Information
+                        </label>
+
+                        <!-- Card Number -->
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Card Number</label>
+                                <div id="card-number" class="stripe-element"></div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Expiry Date</label>
+                                    <div id="card-expiry" class="stripe-element"></div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">CVC</label>
+                                    <div id="card-cvc" class="stripe-element"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card Errors -->
+                        <div id="card-errors" class="text-sm text-red-600 dark:text-red-400 mt-2" role="alert"></div>
+                    </div>
+
+                    <!-- Promo Code -->
+                    <div x-show="showPromoInput" x-transition>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Promo Code
+                        </label>
+                        <div class="flex gap-2">
+                            <input type="text"
+                                   name="promo_code"
+                                   x-model="promoCode"
+                                   placeholder="Enter code"
+                                   class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                            <button type="button"
+                                    @click="applyPromoCode()"
+                                    :disabled="!promoCode || applyingPromo"
+                                    class="px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors">
+                                <span x-show="!applyingPromo">Apply</span>
+                                <svg x-show="applyingPromo" class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <p x-show="promoError" x-text="promoError" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+                        <p x-show="promoSuccess" x-text="promoSuccess" class="mt-1 text-sm text-green-600 dark:text-green-400"></p>
+                    </div>
+
+                    <button type="button"
+                            x-show="!showPromoInput"
+                            @click="showPromoInput = true"
+                            class="text-sm text-primary-600 dark:text-primary-400 hover:underline">
+                        Have a promo code?
+                    </button>
+
+                    <!-- Terms -->
+                    <div class="flex items-start">
+                        <input type="checkbox"
+                               id="terms"
+                               name="terms"
+                               required
+                               class="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded">
+                        <label for="terms" class="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                            I agree to the
+                            <a href="#" class="text-primary-600 dark:text-primary-400 hover:underline">Terms of Service</a>
+                            and
+                            <a href="#" class="text-primary-600 dark:text-primary-400 hover:underline">Privacy Policy</a>
+                        </label>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit"
+                            :disabled="loading"
+                            class="w-full py-4 px-6 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        <template x-if="!loading">
+                            <span class="flex items-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                                Subscribe Now
+                            </span>
+                        </template>
+                        <template x-if="loading">
+                            <span class="flex items-center gap-2">
+                                <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Processing...
+                            </span>
+                        </template>
+                    </button>
+
+                    <!-- Security Note -->
+                    <div class="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                        Secured by Stripe. Your payment info is encrypted.
+                    </div>
+                </form>
+            </div>
+
+            <!-- Payment Methods -->
+            <div class="mt-6 flex items-center justify-center gap-4">
+                <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/visa.svg" alt="Visa" class="h-8 opacity-50 dark:invert">
+                <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/mastercard.svg" alt="Mastercard" class="h-8 opacity-50 dark:invert">
+                <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/americanexpress.svg" alt="Amex" class="h-8 opacity-50 dark:invert">
+                <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/stripe.svg" alt="Stripe" class="h-8 opacity-50 dark:invert">
+            </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="order-1 lg:order-2">
+            <div class="checkout-summary rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden sticky top-8">
+                <!-- Plan Header -->
+                <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">{{ plan.name }}</h2>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ plan.description }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Plan Features -->
+                <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">What's included:</h3>
+                    <ul class="space-y-3">
+                        <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                            <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            {% if plan.max_bank_accounts == -1 %}Unlimited{% else %}{{ plan.max_bank_accounts }}{% endif %} bank accounts
+                        </li>
+                        <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                            <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            {% if plan.max_budgets == -1 %}Unlimited{% else %}{{ plan.max_budgets }}{% endif %} budgets
+                        </li>
+                        <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                            <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            {% if plan.max_transactions_per_month == -1 %}Unlimited{% else %}{{ plan.max_transactions_per_month }}{% endif %} transactions/month
+                        </li>
+                        {% if plan.ai_categorization %}
+                        <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                            <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            AI-powered categorization
+                        </li>
+                        {% endif %}
+                        {% if plan.bank_sync %}
+                        <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                            <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            Automatic bank sync
+                        </li>
+                        {% endif %}
+                        {% if plan.priority_support %}
+                        <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                            <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            Priority support
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <!-- Price Summary -->
+                <div class="p-6">
+                    <div class="space-y-3">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600 dark:text-gray-400">{{ plan.name }} plan</span>
+                            <span class="text-gray-900 dark:text-white font-medium"
+                                  x-text="billingInterval === 'year' ? '{{ plan.price_yearly }}&euro;' : '{{ plan.price_monthly }}&euro;'">
+                                {{ plan.price_monthly }}&euro;
+                            </span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600 dark:text-gray-400">Billing period</span>
+                            <span class="text-gray-900 dark:text-white font-medium"
+                                  x-text="billingInterval === 'year' ? 'Yearly' : 'Monthly'">
+                                Monthly
+                            </span>
+                        </div>
+                        <div x-show="discount > 0" class="flex justify-between text-sm text-green-600 dark:text-green-400">
+                            <span>Discount</span>
+                            <span x-text="'-' + discount + '&euro;'">-0&euro;</span>
+                        </div>
+                        <div class="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-900 dark:text-white font-semibold">Total</span>
+                                <span class="text-xl font-bold text-gray-900 dark:text-white"
+                                      x-text="total + '&euro;'">
+                                    {{ plan.price_monthly }}&euro;
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1"
+                               x-text="billingInterval === 'year' ? 'Billed annually' : 'Billed monthly'">
+                                Billed monthly
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Guarantee Badge -->
+                <div class="p-4 bg-green-50 dark:bg-green-900/20 border-t border-green-100 dark:border-green-900/30">
+                    <div class="flex items-center gap-3">
+                        <div class="secure-badge p-2 rounded-lg">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-green-800 dark:text-green-300">30-Day Money-Back Guarantee</p>
+                            <p class="text-xs text-green-600 dark:text-green-400">Not satisfied? Get a full refund within 30 days.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div x-show="loading"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         class="fixed inset-0 z-50 flex items-center justify-center loading-overlay bg-white/80 dark:bg-gray-900/80">
+        <div class="text-center">
+            <svg class="w-16 h-16 text-primary-600 animate-spin mx-auto" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="mt-4 text-lg font-medium text-gray-900 dark:text-white">Redirecting to secure checkout...</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Please wait while we prepare your payment.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Stripe.js -->
+<script src="https://js.stripe.com/v3/"></script>
+
+<script>
+function checkoutApp() {
+    return {
+        billingInterval: 'month',
+        loading: false,
+        showPromoInput: false,
+        promoCode: '',
+        promoError: '',
+        promoSuccess: '',
+        applyingPromo: false,
+        discount: 0,
+        priceMonthly: {{ plan.price_monthly }},
+        priceYearly: {{ plan.price_yearly }},
+
+        get total() {
+            const basePrice = this.billingInterval === 'year' ? this.priceYearly : this.priceMonthly;
+            return Math.max(0, basePrice - this.discount);
+        },
+
+        init() {
+            // Check URL params for billing interval
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('interval') === 'year') {
+                this.billingInterval = 'year';
+            }
+        },
+
+        handleSubmit(event) {
+            // Form will submit normally and redirect to Stripe Checkout
+            this.loading = true;
+        },
+
+        async applyPromoCode() {
+            if (!this.promoCode) return;
+
+            this.applyingPromo = true;
+            this.promoError = '';
+            this.promoSuccess = '';
+
+            try {
+                // In production, this would validate the promo code via API
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // Simulated promo code validation
+                if (this.promoCode.toLowerCase() === 'welcome20') {
+                    this.discount = this.billingInterval === 'year' ? 20 : 2;
+                    this.promoSuccess = 'Promo code applied! 20% off your first payment.';
+                } else {
+                    this.promoError = 'Invalid promo code. Please try again.';
+                }
+            } catch (error) {
+                this.promoError = 'Failed to apply promo code. Please try again.';
+            } finally {
+                this.applyingPromo = false;
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

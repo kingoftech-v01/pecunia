@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Save Your Backup Codes - Pecunia{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-2xl">
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="text-center mb-6">
+            <div class="mx-auto h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-900">
+                Save Your Backup Codes
+            </h1>
+            <p class="text-gray-600 mt-2">
+                Two-factor authentication is now enabled!
+            </p>
+        </div>
+
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div class="flex">
+                <svg class="h-5 w-5 text-yellow-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <div class="ml-3">
+                    <h3 class="text-sm font-semibold text-yellow-800">
+                        Important: Save these codes now
+                    </h3>
+                    <p class="text-sm text-yellow-700 mt-1">
+                        These backup codes can be used to access your account if you lose your
+                        authenticator device. Each code can only be used once.
+                        <strong>This is the only time these codes will be shown.</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-lg font-semibold text-gray-800">Your Backup Codes</h2>
+                <div class="space-x-2">
+                    <button type="button"
+                            id="copy-codes-btn"
+                            class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
+                        Copy
+                    </button>
+                    <button type="button"
+                            id="download-codes-btn"
+                            class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
+                        Download
+                    </button>
+                    <button type="button"
+                            id="print-codes-btn"
+                            class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
+                        Print
+                    </button>
+                </div>
+            </div>
+
+            <div id="backup-codes" class="bg-gray-50 rounded-lg p-4 font-mono text-sm">
+                <div class="grid grid-cols-2 gap-2">
+                    {% for code in backup_codes %}
+                    <div class="p-2 bg-white rounded border border-gray-200 text-center select-all">
+                        {{ code }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <p class="text-xs text-gray-500 mt-2 text-center">
+                {{ backup_codes|length }} codes generated | Each code can only be used once
+            </p>
+        </div>
+
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <h3 class="text-sm font-semibold text-blue-800 mb-2">
+                How to store your codes safely:
+            </h3>
+            <ul class="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                <li>Save them in a password manager</li>
+                <li>Print them and store in a secure location</li>
+                <li>Keep a copy in a safe or safety deposit box</li>
+                <li>Do NOT store them on your phone or in your email</li>
+            </ul>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="confirmed" value="1">
+
+            <div class="flex items-start mb-4">
+                <input type="checkbox"
+                       id="saved-confirmation"
+                       required
+                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-1">
+                <label for="saved-confirmation" class="ml-2 text-sm text-gray-700">
+                    I have saved my backup codes in a secure location and understand that
+                    I won't be able to see them again.
+                </label>
+            </div>
+
+            <button type="submit"
+                    class="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    id="continue-btn"
+                    disabled>
+                Continue to Dashboard
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Hidden content for printing -->
+<div id="print-content" class="hidden print:block">
+    <div style="font-family: monospace; padding: 20px;">
+        <h1 style="font-size: 18px; margin-bottom: 10px;">Pecunia Backup Codes</h1>
+        <p style="font-size: 12px; margin-bottom: 20px;">
+            Generated: {% now "Y-m-d H:i" %}<br>
+            Keep these codes in a safe place. Each code can only be used once.
+        </p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            {% for code in backup_codes %}
+            <div style="padding: 10px; border: 1px solid #ccc; text-align: center; font-size: 14px;">
+                {{ code }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkbox = document.getElementById('saved-confirmation');
+    const continueBtn = document.getElementById('continue-btn');
+    const copyBtn = document.getElementById('copy-codes-btn');
+    const downloadBtn = document.getElementById('download-codes-btn');
+    const printBtn = document.getElementById('print-codes-btn');
+
+    // Enable/disable continue button
+    checkbox.addEventListener('change', function() {
+        continueBtn.disabled = !this.checked;
+    });
+
+    // Get codes as text
+    const codes = [
+        {% for code in backup_codes %}
+        '{{ code }}',
+        {% endfor %}
+    ];
+
+    // Copy codes to clipboard
+    copyBtn.addEventListener('click', function() {
+        const codesText = codes.join('\n');
+        navigator.clipboard.writeText(codesText).then(() => {
+            const originalText = this.textContent;
+            this.textContent = 'Copied!';
+            setTimeout(() => {
+                this.textContent = originalText;
+            }, 2000);
+        });
+    });
+
+    // Download codes as text file
+    downloadBtn.addEventListener('click', function() {
+        const content = `Pecunia Backup Codes
+Generated: ${new Date().toISOString()}
+Keep these codes in a safe place. Each code can only be used once.
+
+${codes.join('\n')}
+`;
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'pecunia-backup-codes.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+
+    // Print codes
+    printBtn.addEventListener('click', function() {
+        window.print();
+    });
+});
+</script>
+
+<style>
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #print-content, #print-content * {
+        visibility: visible;
+    }
+    #print-content {
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+}
+</style>
+{% endblock %}

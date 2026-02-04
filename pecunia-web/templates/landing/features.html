@@ -1,0 +1,521 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Features - Pecunia{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Feature section styling */
+    .feature-section {
+        position: relative;
+    }
+
+    .feature-section::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, transparent, #e5e7eb, transparent);
+        transform: translateX(-50%);
+    }
+
+    .dark .feature-section::before {
+        background: linear-gradient(to bottom, transparent, #374151, transparent);
+    }
+
+    @media (max-width: 768px) {
+        .feature-section::before {
+            left: 24px;
+        }
+    }
+
+    /* Feature card animation */
+    .feature-detail-card {
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 0.6s ease forwards;
+    }
+
+    @keyframes fadeInUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .feature-detail-card:nth-child(1) { animation-delay: 0.1s; }
+    .feature-detail-card:nth-child(2) { animation-delay: 0.2s; }
+    .feature-detail-card:nth-child(3) { animation-delay: 0.3s; }
+    .feature-detail-card:nth-child(4) { animation-delay: 0.4s; }
+    .feature-detail-card:nth-child(5) { animation-delay: 0.5s; }
+    .feature-detail-card:nth-child(6) { animation-delay: 0.6s; }
+
+    /* Gradient text */
+    .gradient-text {
+        background: linear-gradient(135deg, #0ea5e9, #d946ef);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* Feature icon container */
+    .feature-icon-lg {
+        width: 80px;
+        height: 80px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.3s ease;
+    }
+
+    .feature-icon-lg:hover {
+        transform: scale(1.1) rotate(5deg);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="py-16 text-center">
+    <div class="max-w-4xl mx-auto">
+        <span class="inline-flex items-center px-4 py-2 bg-primary-100 dark:bg-primary-900/50 rounded-full text-primary-700 dark:text-primary-300 text-sm font-medium mb-6">
+            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path>
+            </svg>
+            Powerful Features
+        </span>
+        <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 dark:text-white mb-6">
+            Everything You Need for
+            <span class="gradient-text">Financial Success</span>
+        </h1>
+        <p class="text-xl text-gray-600 dark:text-gray-300">
+            Discover all the tools and features that make Pecunia the smartest way to manage your money
+        </p>
+    </div>
+</section>
+
+<!-- Core Features Grid -->
+<section class="py-12">
+    <div class="max-w-7xl mx-auto">
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Bank Connection -->
+            <div class="feature-detail-card bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-shadow">
+                <div class="feature-icon-lg bg-primary-100 dark:bg-primary-900/50 mb-6">
+                    <svg class="w-10 h-10 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Bank Connection</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">
+                    Connect securely to over 10,000 financial institutions worldwide. Your data is encrypted with bank-level security.
+                </p>
+                <ul class="space-y-2">
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Automatic transaction sync
+                    </li>
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Real-time balance updates
+                    </li>
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Multi-currency support
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Smart Budgeting -->
+            <div class="feature-detail-card bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-shadow">
+                <div class="feature-icon-lg bg-green-100 dark:bg-green-900/50 mb-6">
+                    <svg class="w-10 h-10 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Smart Budgeting</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">
+                    Create flexible budgets that adapt to your spending patterns. Get intelligent suggestions based on your history.
+                </p>
+                <ul class="space-y-2">
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Weekly, monthly, yearly budgets
+                    </li>
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Category-based tracking
+                    </li>
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Rollover unused amounts
+                    </li>
+                </ul>
+            </div>
+
+            <!-- AI Insights -->
+            <div class="feature-detail-card bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-shadow">
+                <div class="feature-icon-lg bg-accent-100 dark:bg-accent-900/50 mb-6">
+                    <svg class="w-10 h-10 text-accent-600 dark:text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">AI-Powered Insights</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">
+                    Get personalized recommendations powered by advanced AI. Discover patterns and opportunities to save money.
+                </p>
+                <ul class="space-y-2">
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Spending pattern analysis
+                    </li>
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Savings opportunities
+                    </li>
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Bill negotiation tips
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Expense Tracking -->
+            <div class="feature-detail-card bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-shadow">
+                <div class="feature-icon-lg bg-yellow-100 dark:bg-yellow-900/50 mb-6">
+                    <svg class="w-10 h-10 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Expense Tracking</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">
+                    Automatically categorize every transaction. Manual entry with receipt scanning and smart suggestions.
+                </p>
+                <ul class="space-y-2">
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Auto-categorization
+                    </li>
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Receipt capture
+                    </li>
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Split transactions
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Bill Reminders -->
+            <div class="feature-detail-card bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-shadow">
+                <div class="feature-icon-lg bg-red-100 dark:bg-red-900/50 mb-6">
+                    <svg class="w-10 h-10 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Bill Reminders</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">
+                    Never miss a payment again. Get timely notifications for upcoming bills and subscription renewals.
+                </p>
+                <ul class="space-y-2">
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Smart bill detection
+                    </li>
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Subscription tracking
+                    </li>
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Custom alert schedules
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Financial Reports -->
+            <div class="feature-detail-card bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-shadow">
+                <div class="feature-icon-lg bg-blue-100 dark:bg-blue-900/50 mb-6">
+                    <svg class="w-10 h-10 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Financial Reports</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">
+                    Beautiful charts and detailed reports help you understand your money at a glance. Export for tax season.
+                </p>
+                <ul class="space-y-2">
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Income vs expenses
+                    </li>
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Net worth tracking
+                    </li>
+                    <li class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        PDF & CSV export
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Advanced Features Section -->
+<section class="py-20 bg-gray-50 dark:bg-gray-800/30 -mx-4 px-4">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                Advanced Features
+            </h2>
+            <p class="text-lg text-gray-600 dark:text-gray-300">
+                Powerful tools for those who want more control
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-12">
+            <!-- Goal Tracking -->
+            <div class="flex">
+                <div class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center text-white mr-6">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Goal Tracking</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4">
+                        Set financial goals and track your progress. Whether it's saving for a vacation, building an emergency fund, or paying off debt.
+                    </p>
+                    <div class="flex items-center space-x-4 text-sm">
+                        <span class="text-primary-600 dark:text-primary-400">Visual progress tracking</span>
+                        <span class="text-gray-400">|</span>
+                        <span class="text-primary-600 dark:text-primary-400">Milestone celebrations</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Investment Tracking -->
+            <div class="flex">
+                <div class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-green-500 to-teal-500 rounded-xl flex items-center justify-center text-white mr-6">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Investment Tracking</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4">
+                        Monitor your investment portfolio alongside your regular accounts. See your complete financial picture in one place.
+                    </p>
+                    <div class="flex items-center space-x-4 text-sm">
+                        <span class="text-primary-600 dark:text-primary-400">Portfolio performance</span>
+                        <span class="text-gray-400">|</span>
+                        <span class="text-primary-600 dark:text-primary-400">Asset allocation</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Rules -->
+            <div class="flex">
+                <div class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-accent-500 to-pink-500 rounded-xl flex items-center justify-center text-white mr-6">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Custom Rules</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4">
+                        Create automated rules to categorize transactions, split payments, or trigger alerts based on your preferences.
+                    </p>
+                    <div class="flex items-center space-x-4 text-sm">
+                        <span class="text-primary-600 dark:text-primary-400">If-then automation</span>
+                        <span class="text-gray-400">|</span>
+                        <span class="text-primary-600 dark:text-primary-400">Smart tagging</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Export -->
+            <div class="flex">
+                <div class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center text-white mr-6">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Data Export & API</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4">
+                        Export your data anytime in multiple formats. Developers can access our API to build custom integrations.
+                    </p>
+                    <div class="flex items-center space-x-4 text-sm">
+                        <span class="text-primary-600 dark:text-primary-400">CSV, PDF, JSON</span>
+                        <span class="text-gray-400">|</span>
+                        <span class="text-primary-600 dark:text-primary-400">REST API access</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Security Section -->
+<section class="py-20">
+    <div class="max-w-7xl mx-auto">
+        <div class="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+                <span class="inline-flex items-center px-3 py-1 bg-green-100 dark:bg-green-900/50 rounded-full text-green-700 dark:text-green-300 text-sm font-medium mb-4">
+                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                    Bank-Level Security
+                </span>
+                <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-6">
+                    Your Security is Our Priority
+                </h2>
+                <p class="text-lg text-gray-600 dark:text-gray-300 mb-8">
+                    We use the same security standards as major banks to keep your financial data safe and private.
+                </p>
+
+                <div class="space-y-4">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center mr-4">
+                            <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 dark:text-white">256-bit AES Encryption</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">All data is encrypted at rest and in transit</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center mr-4">
+                            <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 dark:text-white">SOC 2 Type II Certified</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Independently audited security controls</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center mr-4">
+                            <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 dark:text-white">Two-Factor Authentication</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Extra layer of protection for your account</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center mr-4">
+                            <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 dark:text-white">Read-Only Bank Access</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">We can never move your money or make changes</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative">
+                <div class="bg-gradient-to-br from-green-100 to-blue-100 dark:from-green-900/30 dark:to-blue-900/30 rounded-3xl p-8">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">99.9%</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Uptime SLA</div>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">0</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Security Breaches</div>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">24/7</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Monitoring</div>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">GDPR</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Compliant</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-16">
+    <div class="max-w-4xl mx-auto text-center">
+        <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            Ready to Get Started?
+        </h2>
+        <p class="text-lg text-gray-600 dark:text-gray-300 mb-8">
+            Join thousands of users who are already taking control of their finances with Pecunia.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="{% url 'accounts:register' %}"
+               class="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-primary-600 to-accent-600 rounded-xl hover:from-primary-700 hover:to-accent-700 shadow-lg transition-all">
+                Start Free Trial
+                <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                </svg>
+            </a>
+            <a href="{% url 'landing:index' %}#pricing"
+               class="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
+                View Pricing
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}

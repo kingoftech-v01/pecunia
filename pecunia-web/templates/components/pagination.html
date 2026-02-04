@@ -1,0 +1,225 @@
+{% comment %}
+Pagination Component
+====================
+Usage:
+    {% include "components/pagination.html" with page_obj=page_obj %}
+
+Parameters:
+    - page_obj: Django Paginator page object (required)
+    - show_info: true/false - show "Showing X to Y of Z" (default: true)
+    - size: sm, md, lg (default: md)
+    - variant: default, simple, minimal (default: default)
+    - alignment: left, center, right (default: center)
+    - max_pages: Maximum page numbers to show (default: 5)
+
+HTMX Support:
+    - hx_target: Target for HTMX requests
+    - hx_swap: Swap method (default: innerHTML)
+    - hx_push_url: Push URL to browser history (default: true)
+{% endcomment %}
+
+{% with pag_size=size|default:"md" pag_variant=variant|default:"default" pag_alignment=alignment|default:"center" pag_max_pages=max_pages|default:5 %}
+
+{% if page_obj.paginator.num_pages > 1 or show_info %}
+<nav class="flex flex-col sm:flex-row items-center gap-4 py-4
+            {% if pag_alignment == 'left' %}sm:justify-start
+            {% elif pag_alignment == 'right' %}sm:justify-end
+            {% else %}sm:justify-between{% endif %}"
+     aria-label="Pagination">
+
+    <!-- Results info -->
+    {% if show_info|default:True %}
+    <div class="text-sm text-gray-600 dark:text-gray-400">
+        Showing
+        <span class="font-medium text-gray-900 dark:text-white">{{ page_obj.start_index }}</span>
+        to
+        <span class="font-medium text-gray-900 dark:text-white">{{ page_obj.end_index }}</span>
+        of
+        <span class="font-medium text-gray-900 dark:text-white">{{ page_obj.paginator.count }}</span>
+        results
+    </div>
+    {% endif %}
+
+    {% if page_obj.paginator.num_pages > 1 %}
+
+    {% if pag_variant == 'simple' %}
+    <!-- Simple Variant: Previous / Next only -->
+    <div class="flex items-center gap-2">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+           {% if hx_target %}hx-get="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" hx-target="{{ hx_target }}" hx-swap="{{ hx_swap|default:'innerHTML' }}" {% if hx_push_url|default:True %}hx-push-url="true"{% endif %}{% endif %}
+           class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Previous
+        </a>
+        {% else %}
+        <span class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg cursor-not-allowed">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Previous
+        </span>
+        {% endif %}
+
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+           {% if hx_target %}hx-get="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" hx-target="{{ hx_target }}" hx-swap="{{ hx_swap|default:'innerHTML' }}" {% if hx_push_url|default:True %}hx-push-url="true"{% endif %}{% endif %}
+           class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            Next
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+        </a>
+        {% else %}
+        <span class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg cursor-not-allowed">
+            Next
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+        </span>
+        {% endif %}
+    </div>
+
+    {% elif pag_variant == 'minimal' %}
+    <!-- Minimal Variant: Just page numbers -->
+    <div class="flex items-center gap-1">
+        {% for num in page_obj.paginator.page_range %}
+            {% if num == page_obj.number %}
+            <span class="w-10 h-10 flex items-center justify-center text-sm font-medium text-white bg-primary-600 rounded-lg">
+                {{ num }}
+            </span>
+            {% elif num == 1 or num == page_obj.paginator.num_pages or num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+            <a href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+               {% if hx_target %}hx-get="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" hx-target="{{ hx_target }}" hx-swap="{{ hx_swap|default:'innerHTML' }}" {% if hx_push_url|default:True %}hx-push-url="true"{% endif %}{% endif %}
+               class="w-10 h-10 flex items-center justify-center text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                {{ num }}
+            </a>
+            {% elif num == page_obj.number|add:"-3" or num == page_obj.number|add:"3" %}
+            <span class="w-10 h-10 flex items-center justify-center text-gray-400">...</span>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <!-- Default Variant: Full pagination -->
+    <div class="flex items-center gap-1">
+        <!-- First Page -->
+        {% if page_obj.has_previous %}
+        <a href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+           {% if hx_target %}hx-get="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" hx-target="{{ hx_target }}" hx-swap="{{ hx_swap|default:'innerHTML' }}" {% if hx_push_url|default:True %}hx-push-url="true"{% endif %}{% endif %}
+           class="{% if pag_size == 'sm' %}w-8 h-8{% elif pag_size == 'lg' %}w-12 h-12{% else %}w-10 h-10{% endif %} flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+           title="First page">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+            </svg>
+        </a>
+        {% endif %}
+
+        <!-- Previous Page -->
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+           {% if hx_target %}hx-get="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" hx-target="{{ hx_target }}" hx-swap="{{ hx_swap|default:'innerHTML' }}" {% if hx_push_url|default:True %}hx-push-url="true"{% endif %}{% endif %}
+           class="{% if pag_size == 'sm' %}w-8 h-8{% elif pag_size == 'lg' %}w-12 h-12{% else %}w-10 h-10{% endif %} flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+           title="Previous page">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+        </a>
+        {% else %}
+        <span class="{% if pag_size == 'sm' %}w-8 h-8{% elif pag_size == 'lg' %}w-12 h-12{% else %}w-10 h-10{% endif %} flex items-center justify-center text-gray-300 dark:text-gray-600 cursor-not-allowed">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+        </span>
+        {% endif %}
+
+        <!-- Page Numbers -->
+        {% for num in page_obj.paginator.page_range %}
+            {% if num == page_obj.number %}
+            <span class="{% if pag_size == 'sm' %}w-8 h-8 text-xs{% elif pag_size == 'lg' %}w-12 h-12 text-base{% else %}w-10 h-10 text-sm{% endif %} flex items-center justify-center font-medium text-white bg-primary-600 rounded-lg shadow-sm">
+                {{ num }}
+            </span>
+            {% elif num == 1 or num == page_obj.paginator.num_pages or num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+            <a href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+               {% if hx_target %}hx-get="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" hx-target="{{ hx_target }}" hx-swap="{{ hx_swap|default:'innerHTML' }}" {% if hx_push_url|default:True %}hx-push-url="true"{% endif %}{% endif %}
+               class="{% if pag_size == 'sm' %}w-8 h-8 text-xs{% elif pag_size == 'lg' %}w-12 h-12 text-base{% else %}w-10 h-10 text-sm{% endif %} flex items-center justify-center font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                {{ num }}
+            </a>
+            {% elif num == page_obj.number|add:"-3" or num == page_obj.number|add:"3" %}
+            <span class="{% if pag_size == 'sm' %}w-8 h-8{% elif pag_size == 'lg' %}w-12 h-12{% else %}w-10 h-10{% endif %} flex items-center justify-center text-gray-400 dark:text-gray-500">
+                ...
+            </span>
+            {% endif %}
+        {% endfor %}
+
+        <!-- Next Page -->
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+           {% if hx_target %}hx-get="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" hx-target="{{ hx_target }}" hx-swap="{{ hx_swap|default:'innerHTML' }}" {% if hx_push_url|default:True %}hx-push-url="true"{% endif %}{% endif %}
+           class="{% if pag_size == 'sm' %}w-8 h-8{% elif pag_size == 'lg' %}w-12 h-12{% else %}w-10 h-10{% endif %} flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+           title="Next page">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+        </a>
+        {% else %}
+        <span class="{% if pag_size == 'sm' %}w-8 h-8{% elif pag_size == 'lg' %}w-12 h-12{% else %}w-10 h-10{% endif %} flex items-center justify-center text-gray-300 dark:text-gray-600 cursor-not-allowed">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+        </span>
+        {% endif %}
+
+        <!-- Last Page -->
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+           {% if hx_target %}hx-get="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" hx-target="{{ hx_target }}" hx-swap="{{ hx_swap|default:'innerHTML' }}" {% if hx_push_url|default:True %}hx-push-url="true"{% endif %}{% endif %}
+           class="{% if pag_size == 'sm' %}w-8 h-8{% elif pag_size == 'lg' %}w-12 h-12{% else %}w-10 h-10{% endif %} flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+           title="Last page">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+            </svg>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% endif %}
+</nav>
+{% endif %}
+
+{% endwith %}
+
+{% comment %}
+==========================================
+Load More Button (Alternative to pagination)
+Usage: {% include "components/pagination.html" with load_more=True next_url=next_page_url %}
+==========================================
+{% endcomment %}
+
+{% if load_more and has_next %}
+<div class="flex justify-center py-6">
+    <button type="button"
+            hx-get="{{ next_url }}"
+            hx-target="{{ load_more_target|default:'#results' }}"
+            hx-swap="beforeend"
+            hx-indicator="#load-more-spinner"
+            class="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all shadow-sm hover:shadow">
+
+        <span id="load-more-spinner" class="htmx-indicator">
+            <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        </span>
+
+        <span>Load More</span>
+
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+    </button>
+</div>
+{% endif %}

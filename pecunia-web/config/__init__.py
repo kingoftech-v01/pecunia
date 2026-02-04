@@ -1,0 +1,3 @@
+"""
+Pecunia Web Configuration Package.
+"""

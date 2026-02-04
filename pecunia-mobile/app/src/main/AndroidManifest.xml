@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- ============================================ -->
+    <!-- PERMISSIONS -->
+    <!-- ============================================ -->
+
+    <!-- Network permissions -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Camera permissions (for receipt scanning) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Biometric authentication -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- Vibration (for haptic feedback) -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Storage permissions (for exports and receipt images) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28"
+        tools:ignore="ScopedStorage" />
+
+    <!-- Notifications (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Foreground service for sync operations -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!-- Receive boot completed for scheduled sync -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Wake lock for background sync -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- ============================================ -->
+    <!-- FEATURES -->
+    <!-- ============================================ -->
+
+    <!-- Camera feature (optional for devices without camera) -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera.autofocus"
+        android:required="false" />
+
+    <!-- Biometric feature (optional) -->
+    <uses-feature
+        android:name="android.hardware.fingerprint"
+        android:required="false" />
+
+    <!-- ============================================ -->
+    <!-- APPLICATION -->
+    <!-- ============================================ -->
+
+    <application
+        android:name=".PecuniaApp"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Pecunia"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:enableOnBackInvokedCallback="true"
+        android:localeConfig="@xml/locales_config"
+        tools:targetApi="34">
+
+        <!-- ============================================ -->
+        <!-- MAIN ACTIVITY -->
+        <!-- ============================================ -->
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Pecunia.SplashScreen"
+            android:windowSoftInputMode="adjustResize"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity">
+
+            <!-- Main launcher intent -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- App scheme deep links (pecunia://) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="pecunia" />
+            </intent-filter>
+
+            <!-- Web deep links (https://www.pecunia.app) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:host="www.pecunia.app" />
+                <data android:host="pecunia.app" />
+
+                <!-- Supported paths -->
+                <data android:pathPrefix="/app" />
+                <data android:pathPrefix="/transaction" />
+                <data android:pathPrefix="/budget" />
+                <data android:pathPrefix="/account" />
+                <data android:pathPrefix="/auth" />
+            </intent-filter>
+
+            <!-- Navigation deep links for specific screens -->
+            <nav-graph android:value="@navigation/nav_graph" />
+        </activity>
+
+        <!-- ============================================ -->
+        <!-- SERVICES -->
+        <!-- ============================================ -->
+
+        <!-- Data sync service -->
+        <service
+            android:name=".services.DataSyncService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- Receipt processing service -->
+        <service
+            android:name=".services.ReceiptProcessingService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- ============================================ -->
+        <!-- BROADCAST RECEIVERS -->
+        <!-- ============================================ -->
+
+        <!-- Boot receiver for scheduled sync -->
+        <receiver
+            android:name=".receivers.BootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Notification action receiver -->
+        <receiver
+            android:name=".receivers.NotificationActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.pecunia.action.MARK_AS_READ" />
+                <action android:name="com.pecunia.action.DISMISS" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ============================================ -->
+        <!-- CONTENT PROVIDERS -->
+        <!-- ============================================ -->
+
+        <!-- FileProvider for sharing files -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- WorkManager initialization -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup" />
+        </provider>
+
+        <!-- ============================================ -->
+        <!-- META-DATA -->
+        <!-- ============================================ -->
+
+        <!-- Google Mobile Services Version -->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
+
+        <!-- Firebase Cloud Messaging default channel -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="@string/default_notification_channel_id" />
+
+        <!-- Disable automatic analytics collection -->
+        <meta-data
+            android:name="firebase_analytics_collection_deactivated"
+            android:value="${analyticsCollectionDeactivated}" />
+
+        <!-- Disable automatic crashlytics collection -->
+        <meta-data
+            android:name="firebase_crashlytics_collection_enabled"
+            android:value="${crashlyticsCollectionEnabled}" />
+
+        <!-- ML Kit dependencies -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="ocr" />
+
+    </application>
+
+    <!-- ============================================ -->
+    <!-- QUERIES -->
+    <!-- ============================================ -->
+
+    <queries>
+        <!-- Browser intent for external links -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+
+        <!-- Email intent -->
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
+
+        <!-- Share intent -->
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="*/*" />
+        </intent>
+
+        <!-- Banking apps for open banking integration -->
+        <package android:name="com.plaid.link" />
+    </queries>
+
+</manifest>

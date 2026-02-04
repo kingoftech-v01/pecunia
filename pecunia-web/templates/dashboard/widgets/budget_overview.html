@@ -1,0 +1,136 @@
+{% comment %}
+Budget Overview Widget
+----------------------
+Displays active budget summary, overall progress, and top spending categories.
+Loaded via HTMX for lazy loading.
+{% endcomment %}
+
+<div class="p-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+            Budget Overview
+        </h3>
+        {% if has_budgets %}
+        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+            {% if health_status == 'danger' %}bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300
+            {% elif health_status == 'warning' %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300
+            {% else %}bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300{% endif %}">
+            {% if health_status == 'danger' %}
+            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+            </svg>
+            {{ budgets_over }} over budget
+            {% elif health_status == 'warning' %}
+            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+            </svg>
+            {{ budgets_near }} near limit
+            {% else %}
+            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+            </svg>
+            On track
+            {% endif %}
+        </span>
+        {% endif %}
+    </div>
+
+    {% if has_budgets %}
+    <!-- Overall Progress -->
+    <div class="mb-6">
+        <div class="flex items-center justify-between text-sm mb-2">
+            <span class="text-gray-500 dark:text-gray-400">Overall Budget</span>
+            <span class="font-medium text-gray-900 dark:text-white">
+                ${{ total_spent|floatformat:0 }} / ${{ total_planned|floatformat:0 }}
+            </span>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="relative h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div class="absolute inset-y-0 left-0 rounded-full transition-all duration-500
+                {% if overall_progress > 100 %}bg-red-500
+                {% elif overall_progress > 80 %}bg-yellow-500
+                {% else %}bg-primary-500{% endif %}"
+                 style="width: min({{ overall_progress|floatformat:0 }}%, 100%)">
+            </div>
+            {% if overall_progress > 100 %}
+            <div class="absolute inset-y-0 right-0 w-1 bg-red-600 animate-pulse"></div>
+            {% endif %}
+        </div>
+
+        <div class="flex items-center justify-between mt-2">
+            <span class="text-xs text-gray-500 dark:text-gray-400">
+                {{ overall_progress|floatformat:0 }}% used
+            </span>
+            <span class="text-xs font-medium {% if total_remaining >= 0 %}text-green-600 dark:text-green-400{% else %}text-red-600 dark:text-red-400{% endif %}">
+                {% if total_remaining >= 0 %}
+                ${{ total_remaining|floatformat:0 }} remaining
+                {% else %}
+                ${{ total_remaining|floatformat:0|slice:"1:" }} over
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- Top Categories -->
+    {% if top_categories %}
+    <div class="space-y-3">
+        <h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            Top Categories
+        </h4>
+        {% for category in top_categories %}
+        <div class="group">
+            <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center">
+                    <span class="w-2 h-2 rounded-full mr-2" style="background-color: {{ category.color }}"></span>
+                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ category.name }}</span>
+                </div>
+                <span class="text-sm {% if category.is_over %}text-red-600 dark:text-red-400{% else %}text-gray-600 dark:text-gray-400{% endif %}">
+                    ${{ category.spent|floatformat:0 }}{% if category.planned %} / ${{ category.planned|floatformat:0 }}{% endif %}
+                </span>
+            </div>
+            <div class="relative h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div class="absolute inset-y-0 left-0 rounded-full transition-all duration-300
+                    {% if category.is_over %}bg-red-500{% elif category.progress > 80 %}bg-yellow-500{% else %}bg-primary-500{% endif %}"
+                     style="width: min({{ category.progress|floatformat:0 }}%, 100%); background-color: {% if not category.is_over and category.progress <= 80 %}{{ category.color }}{% endif %}">
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- View All Link -->
+    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <a href="{% url 'frontend:budgets:list' %}"
+           class="inline-flex items-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
+            View all budgets ({{ budget_count }})
+            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+        </a>
+    </div>
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-8">
+        <div class="w-16 h-16 mx-auto bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+            </svg>
+        </div>
+        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-1">No active budgets</h4>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+            Create a budget to track your spending and reach your financial goals
+        </p>
+        <a href="{% url 'frontend:budgets:create' %}"
+           class="inline-flex items-center px-4 py-2 bg-accent-600 hover:bg-accent-700 text-white text-sm font-medium rounded-lg transition-colors">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Create Budget
+        </a>
+    </div>
+    {% endif %}
+</div>

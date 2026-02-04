@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Payment Successful - Pecunia{% endblock %}
+
+{% block extra_css %}
+<style>
+    .success-icon {
+        animation: successPop 0.5s ease-out forwards;
+    }
+    @keyframes successPop {
+        0% {
+            transform: scale(0);
+            opacity: 0;
+        }
+        50% {
+            transform: scale(1.2);
+        }
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+    .success-checkmark {
+        animation: checkDraw 0.5s ease-out 0.3s forwards;
+        stroke-dasharray: 50;
+        stroke-dashoffset: 50;
+    }
+    @keyframes checkDraw {
+        to {
+            stroke-dashoffset: 0;
+        }
+    }
+    .confetti {
+        position: fixed;
+        width: 10px;
+        height: 10px;
+        pointer-events: none;
+        animation: confettiFall 3s ease-out forwards;
+    }
+    @keyframes confettiFall {
+        0% {
+            opacity: 1;
+            transform: translateY(0) rotate(0deg);
+        }
+        100% {
+            opacity: 0;
+            transform: translateY(100vh) rotate(720deg);
+        }
+    }
+    .step-line {
+        background: linear-gradient(to bottom, #10b981 0%, #10b981 50%, #e5e7eb 50%, #e5e7eb 100%);
+        background-size: 100% 200%;
+        animation: fillLine 1s ease-out forwards;
+    }
+    @keyframes fillLine {
+        from { background-position: 0 100%; }
+        to { background-position: 0 0; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="successApp()" x-init="init()" class="max-w-2xl mx-auto text-center">
+    <!-- Confetti Container -->
+    <div id="confetti-container"></div>
+
+    <!-- Success Icon -->
+    <div class="mb-8">
+        <div class="success-icon w-24 h-24 mx-auto bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+            <svg class="w-12 h-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path class="success-checkmark" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Success Message -->
+    <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+        Welcome to Pecunia!
+    </h1>
+    <p class="text-lg text-gray-600 dark:text-gray-400 mb-8">
+        Your subscription is now active. You're all set to start managing your finances like a pro.
+    </p>
+
+    <!-- Order Confirmation -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-8 text-left">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <div>
+                <h2 class="font-semibold text-gray-900 dark:text-white">Payment Confirmed</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400">A confirmation email has been sent to your inbox</p>
+            </div>
+        </div>
+
+        <div class="border-t border-gray-100 dark:border-gray-700 pt-4 space-y-3">
+            <div class="flex justify-between text-sm">
+                <span class="text-gray-500 dark:text-gray-400">Order ID</span>
+                <span class="text-gray-900 dark:text-white font-mono">{{ session_id|default:"ORD-XXXXXXXXXX"|truncatechars:20 }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+                <span class="text-gray-500 dark:text-gray-400">Date</span>
+                <span class="text-gray-900 dark:text-white">{% now "F j, Y" %}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+                <span class="text-gray-500 dark:text-gray-400">Status</span>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                    Active
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Next Steps -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-8 text-left">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Get Started in 3 Easy Steps</h2>
+
+        <div class="space-y-6">
+            <!-- Step 1 -->
+            <div class="flex gap-4">
+                <div class="relative flex flex-col items-center">
+                    <div class="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center z-10">
+                        <span class="text-primary-600 dark:text-primary-400 font-bold">1</span>
+                    </div>
+                    <div class="step-line w-0.5 h-full absolute top-10 left-1/2 -translate-x-1/2" style="animation-delay: 0s;"></div>
+                </div>
+                <div class="flex-1 pb-6">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Connect Your Bank Accounts</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Link your bank accounts to automatically import transactions. We support over 10,000 financial institutions.
+                    </p>
+                    <a href="#" class="inline-flex items-center text-sm text-primary-600 dark:text-primary-400 hover:underline mt-2">
+                        Connect now
+                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="flex gap-4">
+                <div class="relative flex flex-col items-center">
+                    <div class="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center z-10">
+                        <span class="text-primary-600 dark:text-primary-400 font-bold">2</span>
+                    </div>
+                    <div class="step-line w-0.5 h-full absolute top-10 left-1/2 -translate-x-1/2" style="animation-delay: 0.3s;"></div>
+                </div>
+                <div class="flex-1 pb-6">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Set Up Your Budgets</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Create budgets for different spending categories to keep your finances on track.
+                    </p>
+                    <a href="{% url 'budgets:create' %}" class="inline-flex items-center text-sm text-primary-600 dark:text-primary-400 hover:underline mt-2">
+                        Create budget
+                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="flex gap-4">
+                <div class="relative flex flex-col items-center">
+                    <div class="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center z-10">
+                        <span class="text-primary-600 dark:text-primary-400 font-bold">3</span>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Explore AI Insights</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Let our AI analyze your spending patterns and provide personalized recommendations.
+                    </p>
+                    <a href="#" class="inline-flex items-center text-sm text-primary-600 dark:text-primary-400 hover:underline mt-2">
+                        View insights
+                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA Buttons -->
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="{% url 'transactions:list' %}"
+           class="inline-flex items-center justify-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition-colors">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+            </svg>
+            Go to Dashboard
+        </a>
+        <a href="{% url 'frontend:subscriptions:subscription' %}"
+           class="inline-flex items-center justify-center px-6 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-semibold rounded-xl transition-colors">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            Manage Subscription
+        </a>
+    </div>
+
+    <!-- Help Section -->
+    <div class="mt-12 text-center">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+            Need help getting started?
+            <a href="#" class="text-primary-600 dark:text-primary-400 hover:underline">Check our guide</a>
+            or
+            <a href="#" class="text-primary-600 dark:text-primary-400 hover:underline">contact support</a>
+        </p>
+    </div>
+
+    <!-- Auto Redirect Notice -->
+    <div x-show="redirectCountdown > 0"
+         class="mt-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-xl text-sm text-gray-600 dark:text-gray-400">
+        <p>
+            Redirecting to dashboard in
+            <span class="font-semibold text-gray-900 dark:text-white" x-text="redirectCountdown"></span>
+            seconds...
+            <button @click="redirectCountdown = 0" class="text-primary-600 dark:text-primary-400 hover:underline ml-2">
+                Cancel
+            </button>
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function successApp() {
+    return {
+        redirectCountdown: 10,
+        confettiColors: ['#10b981', '#0ea5e9', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'],
+
+        init() {
+            // Show confetti
+            this.showConfetti();
+
+            // Start redirect countdown
+            this.startCountdown();
+        },
+
+        showConfetti() {
+            const container = document.getElementById('confetti-container');
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + 'vw';
+                    confetti.style.top = '-10px';
+                    confetti.style.backgroundColor = this.confettiColors[Math.floor(Math.random() * this.confettiColors.length)];
+                    confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                    confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                    container.appendChild(confetti);
+
+                    // Remove confetti after animation
+                    setTimeout(() => confetti.remove(), 5000);
+                }, i * 50);
+            }
+        },
+
+        startCountdown() {
+            const interval = setInterval(() => {
+                if (this.redirectCountdown > 0) {
+                    this.redirectCountdown--;
+                } else {
+                    clearInterval(interval);
+                    // Redirect to dashboard
+                    window.location.href = "{% url 'transactions:list' %}";
+                }
+            }, 1000);
+
+            // Allow user to cancel redirect
+            this.$watch('redirectCountdown', (value) => {
+                if (value === 0) {
+                    clearInterval(interval);
+                }
+            });
+        }
+    }
+}
+</script>
+{% endblock %}

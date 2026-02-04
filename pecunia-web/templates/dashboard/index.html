@@ -1,0 +1,477 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard - Pecunia{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Dashboard Grid */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    @media (min-width: 768px) {
+        .dashboard-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .dashboard-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    /* Widget card styling */
+    .widget-card {
+        background: white;
+        border-radius: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        transition: box-shadow 0.2s ease;
+    }
+
+    .dark .widget-card {
+        background: #1f2937;
+    }
+
+    .widget-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Loading skeleton */
+    .skeleton {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 0.5rem;
+    }
+
+    .dark .skeleton {
+        background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+        background-size: 200% 100%;
+    }
+
+    @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    /* Quick actions grid */
+    .quick-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    @media (min-width: 640px) {
+        .quick-actions-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    /* Balance card spans full width on larger screens */
+    @media (min-width: 1024px) {
+        .balance-widget {
+            grid-column: span 2;
+        }
+    }
+
+    /* Insights widget spans 2 columns on medium screens */
+    @media (min-width: 768px) and (max-width: 1023px) {
+        .insights-widget {
+            grid-column: span 2;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="dashboardController()" x-init="init()">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                    Welcome back, {{ user.get_short_name|default:user.username }}
+                </h1>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Here's your financial overview for today
+                </p>
+            </div>
+            <div class="mt-4 sm:mt-0 flex items-center space-x-3">
+                <span class="text-sm text-gray-500 dark:text-gray-400">
+                    Last updated: <span x-text="lastUpdated">just now</span>
+                </span>
+                <button @click="refreshAll()"
+                        class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <svg class="w-4 h-4 mr-2" :class="{ 'animate-spin': isRefreshing }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="mb-8">
+        <div class="quick-actions-grid">
+            <a href="{% url 'frontend:transactions:create' %}"
+               class="flex items-center justify-center px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition-colors shadow-sm">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                <span class="font-medium">Add Transaction</span>
+            </a>
+            <a href="{% url 'frontend:budgets:create' %}"
+               class="flex items-center justify-center px-4 py-3 bg-accent-600 hover:bg-accent-700 text-white rounded-xl transition-colors shadow-sm">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+                <span class="font-medium">Create Budget</span>
+            </a>
+            <a href="{% url 'frontend:banking:connect' %}"
+               class="flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors shadow-sm">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                </svg>
+                <span class="font-medium">Connect Bank</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Dashboard Grid -->
+    <div class="dashboard-grid">
+        <!-- Balance Card Widget -->
+        <div class="widget-card balance-widget">
+            <div id="balance-widget"
+                 hx-get="{% url 'dashboard:widget-balance' %}"
+                 hx-trigger="load, refresh-balance from:body"
+                 hx-swap="innerHTML">
+                <!-- Loading skeleton -->
+                <div class="p-6">
+                    <div class="skeleton h-6 w-32 mb-4"></div>
+                    <div class="skeleton h-10 w-48 mb-6"></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="skeleton h-4 w-20 mb-2"></div>
+                            <div class="skeleton h-6 w-28"></div>
+                        </div>
+                        <div>
+                            <div class="skeleton h-4 w-20 mb-2"></div>
+                            <div class="skeleton h-6 w-28"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Transactions Widget -->
+        <div class="widget-card">
+            <div id="transactions-widget"
+                 hx-get="{% url 'dashboard:widget-transactions' %}"
+                 hx-trigger="load, refresh-transactions from:body"
+                 hx-swap="innerHTML">
+                <!-- Loading skeleton -->
+                <div class="p-6">
+                    <div class="skeleton h-6 w-40 mb-4"></div>
+                    <div class="space-y-4">
+                        {% for i in "12345" %}
+                        <div class="flex items-center">
+                            <div class="skeleton h-10 w-10 rounded-full mr-3"></div>
+                            <div class="flex-1">
+                                <div class="skeleton h-4 w-32 mb-2"></div>
+                                <div class="skeleton h-3 w-20"></div>
+                            </div>
+                            <div class="skeleton h-5 w-16"></div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Budget Overview Widget -->
+        <div class="widget-card">
+            <div id="budget-widget"
+                 hx-get="{% url 'dashboard:widget-budget' %}"
+                 hx-trigger="load, refresh-budget from:body"
+                 hx-swap="innerHTML">
+                <!-- Loading skeleton -->
+                <div class="p-6">
+                    <div class="skeleton h-6 w-36 mb-4"></div>
+                    <div class="skeleton h-4 w-full mb-2"></div>
+                    <div class="skeleton h-8 w-full rounded-full mb-6"></div>
+                    <div class="space-y-3">
+                        {% for i in "123" %}
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <div class="skeleton h-4 w-24"></div>
+                                <div class="skeleton h-4 w-16"></div>
+                            </div>
+                            <div class="skeleton h-2 w-full rounded-full"></div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Insights Widget -->
+        <div class="widget-card insights-widget">
+            <div id="insights-widget"
+                 hx-get="{% url 'dashboard:widget-insights' %}"
+                 hx-trigger="load, refresh-insights from:body"
+                 hx-swap="innerHTML">
+                <!-- Loading skeleton -->
+                <div class="p-6">
+                    <div class="skeleton h-6 w-32 mb-4"></div>
+                    <div class="space-y-4">
+                        {% for i in "123" %}
+                        <div class="flex items-start">
+                            <div class="skeleton h-8 w-8 rounded-lg mr-3"></div>
+                            <div class="flex-1">
+                                <div class="skeleton h-4 w-40 mb-2"></div>
+                                <div class="skeleton h-3 w-56"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Spending Chart Widget -->
+        <div class="widget-card">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Spending by Category</h3>
+                    <select x-model="chartPeriod" @change="updateChart()"
+                            class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg">
+                        <option value="week">This Week</option>
+                        <option value="month" selected>This Month</option>
+                        <option value="quarter">Quarter</option>
+                    </select>
+                </div>
+                <div class="relative" style="height: 250px;">
+                    <canvas id="spendingChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Balance Trend Chart Widget -->
+        <div class="widget-card lg:col-span-2">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Income vs Expenses</h3>
+                    <div class="flex items-center space-x-4 text-sm">
+                        <span class="flex items-center">
+                            <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                            Income
+                        </span>
+                        <span class="flex items-center">
+                            <span class="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+                            Expenses
+                        </span>
+                    </div>
+                </div>
+                <div class="relative" style="height: 300px;">
+                    <canvas id="balanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+function dashboardController() {
+    return {
+        lastUpdated: 'just now',
+        isRefreshing: false,
+        chartPeriod: 'month',
+        spendingChart: null,
+        balanceChart: null,
+
+        init() {
+            this.initCharts();
+            this.updateLastUpdated();
+
+            // Auto-refresh every 5 minutes
+            setInterval(() => {
+                this.refreshAll();
+            }, 300000);
+        },
+
+        refreshAll() {
+            this.isRefreshing = true;
+
+            // Trigger HTMX refresh events
+            htmx.trigger(document.body, 'refresh-balance');
+            htmx.trigger(document.body, 'refresh-transactions');
+            htmx.trigger(document.body, 'refresh-budget');
+            htmx.trigger(document.body, 'refresh-insights');
+
+            // Refresh charts
+            this.loadChartData();
+
+            setTimeout(() => {
+                this.isRefreshing = false;
+                this.updateLastUpdated();
+            }, 1000);
+        },
+
+        updateLastUpdated() {
+            const now = new Date();
+            this.lastUpdated = now.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        },
+
+        initCharts() {
+            // Spending Chart (Doughnut)
+            const spendingCtx = document.getElementById('spendingChart');
+            if (spendingCtx) {
+                this.spendingChart = new Chart(spendingCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            data: [],
+                            backgroundColor: [],
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '65%',
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    boxWidth: 12,
+                                    padding: 15,
+                                    font: { size: 12 }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Balance Chart (Line)
+            const balanceCtx = document.getElementById('balanceChart');
+            if (balanceCtx) {
+                this.balanceChart = new Chart(balanceCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            {
+                                label: 'Income',
+                                data: [],
+                                borderColor: '#10b981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                fill: true,
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Expenses',
+                                data: [],
+                                borderColor: '#ef4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                fill: true,
+                                tension: 0.4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': $' + context.raw.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Load initial chart data
+            this.loadChartData();
+        },
+
+        async loadChartData() {
+            try {
+                // Load spending chart data
+                const spendingResponse = await fetch('{% url "dashboard:chart-spending" %}');
+                const spendingData = await spendingResponse.json();
+
+                if (this.spendingChart) {
+                    this.spendingChart.data.labels = spendingData.labels;
+                    this.spendingChart.data.datasets[0].data = spendingData.datasets[0].data;
+                    this.spendingChart.data.datasets[0].backgroundColor = spendingData.datasets[0].backgroundColor;
+                    this.spendingChart.update();
+                }
+
+                // Load balance chart data
+                const balanceResponse = await fetch('{% url "dashboard:chart-balance" %}');
+                const balanceData = await balanceResponse.json();
+
+                if (this.balanceChart) {
+                    this.balanceChart.data.labels = balanceData.labels;
+                    this.balanceChart.data.datasets[0].data = balanceData.datasets[0].data;
+                    this.balanceChart.data.datasets[1].data = balanceData.datasets[1].data;
+                    this.balanceChart.update();
+                }
+            } catch (error) {
+                console.error('Error loading chart data:', error);
+            }
+        },
+
+        updateChart() {
+            this.loadChartData();
+        }
+    }
+}
+</script>
+{% endblock %}

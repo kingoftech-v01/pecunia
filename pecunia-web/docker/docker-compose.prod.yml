@@ -1,0 +1,354 @@
+# Pecunia Web - Production Docker Compose
+# Usage: docker-compose -f docker-compose.prod.yml up -d
+
+version: '3.9'
+
+x-common-env: &common-env
+  DJANGO_ENV: production
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+  DB_HOST: db
+  DB_PORT: 5432
+  DB_NAME: ${DB_NAME:-pecunia}
+  DB_USER: ${DB_USER:-pecunia}
+  DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+  REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379/0
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+  STRIPE_PUBLIC_KEY: ${STRIPE_PUBLIC_KEY:-}
+  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  SENTRY_DSN: ${SENTRY_DSN:-}
+  EMAIL_HOST: ${EMAIL_HOST:-}
+  EMAIL_PORT: ${EMAIL_PORT:-587}
+  EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+  EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+    tag: "{{.Name}}"
+
+services:
+  # =============================================================================
+  # NGINX Reverse Proxy
+  # =============================================================================
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: pecunia-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - static_volume:/app/staticfiles:ro
+      - media_volume:/app/mediafiles:ro
+      - ssl_certs:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging: *default-logging
+    networks:
+      - pecunia-network
+    labels:
+      - "com.pecunia.service=nginx"
+      - "com.pecunia.environment=production"
+
+  # =============================================================================
+  # Django Web Application
+  # =============================================================================
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        - BUILD_DATE=${BUILD_DATE:-}
+        - VCS_REF=${VCS_REF:-}
+        - VERSION=${VERSION:-latest}
+    container_name: pecunia-web
+    entrypoint: ["/app/scripts/entrypoint.sh"]
+    command: ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--threads", "2", "--worker-class", "gthread", "--worker-tmp-dir", "/dev/shm", "--access-logfile", "-", "--error-logfile", "-", "--capture-output", "--enable-stdio-inheritance", "config.wsgi:application"]
+    environment:
+      <<: *common-env
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-2}
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/mediafiles
+      - app_logs:/app/logs
+    expose:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging: *default-logging
+    networks:
+      - pecunia-network
+    labels:
+      - "com.pecunia.service=web"
+      - "com.pecunia.environment=production"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # =============================================================================
+  # PostgreSQL Database
+  # =============================================================================
+  db:
+    image: postgres:16-alpine
+    container_name: pecunia-db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_backups:/backups
+    environment:
+      POSTGRES_DB: ${DB_NAME:-pecunia}
+      POSTGRES_USER: ${DB_USER:-pecunia}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=en_US.UTF-8 --lc-ctype=en_US.UTF-8"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-pecunia} -d ${DB_NAME:-pecunia}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    logging: *default-logging
+    networks:
+      - pecunia-network
+    labels:
+      - "com.pecunia.service=database"
+      - "com.pecunia.environment=production"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # =============================================================================
+  # Redis Cache & Message Broker
+  # =============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: pecunia-redis
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    logging: *default-logging
+    networks:
+      - pecunia-network
+    labels:
+      - "com.pecunia.service=redis"
+      - "com.pecunia.environment=production"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  # =============================================================================
+  # Celery Worker - Background Tasks
+  # =============================================================================
+  celery-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: pecunia-celery-worker
+    entrypoint: ["/app/scripts/entrypoint.sh"]
+    command: ["celery", "-A", "config", "worker", "--loglevel=info", "--concurrency=4", "--max-tasks-per-child=1000", "-Q", "default,high_priority,low_priority"]
+    environment:
+      <<: *common-env
+      C_FORCE_ROOT: "false"
+    volumes:
+      - app_logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "celery", "-A", "config", "inspect", "ping", "-d", "celery@$$HOSTNAME"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging: *default-logging
+    networks:
+      - pecunia-network
+    labels:
+      - "com.pecunia.service=celery-worker"
+      - "com.pecunia.environment=production"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # =============================================================================
+  # Celery Beat - Scheduled Tasks
+  # =============================================================================
+  celery-beat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: pecunia-celery-beat
+    entrypoint: ["/app/scripts/entrypoint.sh"]
+    command: ["celery", "-A", "config", "beat", "--loglevel=info", "--scheduler=django_celery_beat.schedulers:DatabaseScheduler"]
+    environment:
+      <<: *common-env
+      C_FORCE_ROOT: "false"
+    volumes:
+      - app_logs:/app/logs
+      - celery_beat_schedule:/app/celerybeat
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      celery-worker:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "test", "-f", "/app/celerybeat/celerybeat-schedule"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging: *default-logging
+    networks:
+      - pecunia-network
+    labels:
+      - "com.pecunia.service=celery-beat"
+      - "com.pecunia.environment=production"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+  # =============================================================================
+  # Celery Flower - Task Monitoring (Optional)
+  # =============================================================================
+  flower:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: pecunia-flower
+    command: ["celery", "-A", "config", "flower", "--port=5555", "--basic_auth=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin}"]
+    environment:
+      <<: *common-env
+      FLOWER_UNAUTHENTICATED_API: "false"
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - celery-worker
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5555/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging: *default-logging
+    networks:
+      - pecunia-network
+    labels:
+      - "com.pecunia.service=flower"
+      - "com.pecunia.environment=production"
+    profiles:
+      - monitoring
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  postgres_data:
+    driver: local
+    name: pecunia_postgres_data
+  postgres_backups:
+    driver: local
+    name: pecunia_postgres_backups
+  redis_data:
+    driver: local
+    name: pecunia_redis_data
+  static_volume:
+    driver: local
+    name: pecunia_static
+  media_volume:
+    driver: local
+    name: pecunia_media
+  ssl_certs:
+    driver: local
+    name: pecunia_ssl_certs
+  nginx_logs:
+    driver: local
+    name: pecunia_nginx_logs
+  app_logs:
+    driver: local
+    name: pecunia_app_logs
+  celery_beat_schedule:
+    driver: local
+    name: pecunia_celery_beat
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  pecunia-network:
+    driver: bridge
+    name: pecunia-network
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

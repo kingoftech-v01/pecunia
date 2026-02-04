@@ -1,0 +1,3 @@
+"""
+Pecunia Django Applications Package.
+"""

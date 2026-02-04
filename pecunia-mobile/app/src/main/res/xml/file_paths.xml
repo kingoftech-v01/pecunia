@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Internal app files directory -->
+    <files-path
+        name="internal_files"
+        path="." />
+
+    <!-- Cache directory for temporary files -->
+    <cache-path
+        name="cache"
+        path="." />
+
+    <!-- Receipt images cache -->
+    <cache-path
+        name="receipt_images"
+        path="receipts/" />
+
+    <!-- Export files directory -->
+    <files-path
+        name="exports"
+        path="exports/" />
+
+    <!-- External files directory (scoped storage) -->
+    <external-files-path
+        name="external_files"
+        path="." />
+
+    <!-- External cache directory -->
+    <external-cache-path
+        name="external_cache"
+        path="." />
+
+    <!-- Pictures directory for shared images -->
+    <external-files-path
+        name="pictures"
+        path="Pictures/" />
+
+    <!-- Documents directory for exports -->
+    <external-files-path
+        name="documents"
+        path="Documents/" />
+</paths>

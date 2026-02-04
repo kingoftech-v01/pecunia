@@ -1,0 +1,500 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- ============================================ -->
+    <!-- Base Application Theme (Light) -->
+    <!-- ============================================ -->
+    <style name="Theme.Pecunia" parent="Theme.Material3.Light.NoActionBar">
+        <!-- Primary brand colors -->
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorPrimaryContainer">@color/primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/on_primary_container</item>
+
+        <!-- Secondary brand colors -->
+        <item name="colorSecondary">@color/secondary</item>
+        <item name="colorOnSecondary">@color/on_secondary</item>
+        <item name="colorSecondaryContainer">@color/secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/on_secondary_container</item>
+
+        <!-- Tertiary brand colors -->
+        <item name="colorTertiary">@color/tertiary</item>
+        <item name="colorOnTertiary">@color/on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/on_tertiary_container</item>
+
+        <!-- Error colors -->
+        <item name="colorError">@color/error</item>
+        <item name="colorOnError">@color/on_error</item>
+        <item name="colorErrorContainer">@color/error_container</item>
+        <item name="colorOnErrorContainer">@color/on_error_container</item>
+
+        <!-- Background colors -->
+        <item name="android:colorBackground">@color/background</item>
+        <item name="colorOnBackground">@color/on_background</item>
+
+        <!-- Surface colors -->
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+        <item name="colorSurfaceVariant">@color/surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/on_surface_variant</item>
+
+        <!-- Outline colors -->
+        <item name="colorOutline">@color/outline</item>
+        <item name="colorOutlineVariant">@color/outline_variant</item>
+
+        <!-- Inverse colors -->
+        <item name="colorSurfaceInverse">@color/inverse_surface</item>
+        <item name="colorOnSurfaceInverse">@color/inverse_on_surface</item>
+        <item name="colorPrimaryInverse">@color/inverse_primary</item>
+
+        <!-- System bars -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+
+        <!-- Window settings -->
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:windowActivityTransitions">true</item>
+
+        <!-- Text appearance -->
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorTertiary">@color/text_tertiary</item>
+
+        <!-- Ripple color -->
+        <item name="android:colorControlHighlight">@color/ripple_light</item>
+
+        <!-- Component styles -->
+        <item name="materialButtonStyle">@style/Widget.Pecunia.Button</item>
+        <item name="materialCardViewStyle">@style/Widget.Pecunia.CardView</item>
+        <item name="textInputStyle">@style/Widget.Pecunia.TextInputLayout</item>
+        <item name="chipStyle">@style/Widget.Pecunia.Chip</item>
+        <item name="bottomNavigationStyle">@style/Widget.Pecunia.BottomNavigation</item>
+        <item name="floatingActionButtonStyle">@style/Widget.Pecunia.FloatingActionButton</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Dark Theme -->
+    <!-- ============================================ -->
+    <style name="Theme.Pecunia.Dark" parent="Theme.Material3.Dark.NoActionBar">
+        <!-- Primary brand colors -->
+        <item name="colorPrimary">@color/primary_dark_theme</item>
+        <item name="colorOnPrimary">@color/on_primary_dark_theme</item>
+        <item name="colorPrimaryContainer">@color/primary_container_dark_theme</item>
+        <item name="colorOnPrimaryContainer">@color/on_primary_container_dark_theme</item>
+
+        <!-- Secondary brand colors -->
+        <item name="colorSecondary">@color/secondary_dark_theme</item>
+        <item name="colorOnSecondary">@color/on_secondary_dark_theme</item>
+        <item name="colorSecondaryContainer">@color/secondary_container_dark_theme</item>
+        <item name="colorOnSecondaryContainer">@color/on_secondary_container_dark_theme</item>
+
+        <!-- Tertiary brand colors -->
+        <item name="colorTertiary">@color/tertiary_dark_theme</item>
+        <item name="colorOnTertiary">@color/on_tertiary_dark_theme</item>
+        <item name="colorTertiaryContainer">@color/tertiary_container_dark_theme</item>
+        <item name="colorOnTertiaryContainer">@color/on_tertiary_container_dark_theme</item>
+
+        <!-- Error colors -->
+        <item name="colorError">@color/error_dark_theme</item>
+        <item name="colorOnError">@color/on_error_dark_theme</item>
+        <item name="colorErrorContainer">@color/error_container_dark_theme</item>
+        <item name="colorOnErrorContainer">@color/on_error_container_dark_theme</item>
+
+        <!-- Background colors -->
+        <item name="android:colorBackground">@color/background_dark</item>
+        <item name="colorOnBackground">@color/on_background_dark</item>
+
+        <!-- Surface colors -->
+        <item name="colorSurface">@color/surface_dark</item>
+        <item name="colorOnSurface">@color/on_surface_dark</item>
+        <item name="colorSurfaceVariant">@color/surface_variant_dark</item>
+        <item name="colorOnSurfaceVariant">@color/on_surface_variant_dark</item>
+
+        <!-- Outline colors -->
+        <item name="colorOutline">@color/outline_dark</item>
+        <item name="colorOutlineVariant">@color/outline_variant_dark</item>
+
+        <!-- Inverse colors -->
+        <item name="colorSurfaceInverse">@color/inverse_surface_dark</item>
+        <item name="colorOnSurfaceInverse">@color/inverse_on_surface_dark</item>
+        <item name="colorPrimaryInverse">@color/inverse_primary_dark</item>
+
+        <!-- System bars -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+
+        <!-- Window settings -->
+        <item name="android:windowBackground">@color/background_dark</item>
+        <item name="android:windowActivityTransitions">true</item>
+
+        <!-- Text appearance -->
+        <item name="android:textColorPrimary">@color/text_primary_dark</item>
+        <item name="android:textColorSecondary">@color/text_secondary_dark</item>
+        <item name="android:textColorTertiary">@color/text_tertiary_dark</item>
+
+        <!-- Ripple color -->
+        <item name="android:colorControlHighlight">@color/ripple_dark</item>
+
+        <!-- Component styles -->
+        <item name="materialButtonStyle">@style/Widget.Pecunia.Button</item>
+        <item name="materialCardViewStyle">@style/Widget.Pecunia.CardView</item>
+        <item name="textInputStyle">@style/Widget.Pecunia.TextInputLayout</item>
+        <item name="chipStyle">@style/Widget.Pecunia.Chip</item>
+        <item name="bottomNavigationStyle">@style/Widget.Pecunia.BottomNavigation</item>
+        <item name="floatingActionButtonStyle">@style/Widget.Pecunia.FloatingActionButton</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Splash Screen Theme -->
+    <!-- ============================================ -->
+    <style name="Theme.Pecunia.SplashScreen" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/primary</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenAnimationDuration">300</item>
+        <item name="postSplashScreenTheme">@style/Theme.Pecunia</item>
+    </style>
+
+    <style name="Theme.Pecunia.SplashScreen.Dark" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/background_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenAnimationDuration">300</item>
+        <item name="postSplashScreenTheme">@style/Theme.Pecunia.Dark</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Transparent Theme (for dialogs/overlays) -->
+    <!-- ============================================ -->
+    <style name="Theme.Pecunia.Transparent" parent="Theme.Pecunia">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Button Styles -->
+    <!-- ============================================ -->
+    <style name="Widget.Pecunia.Button" parent="Widget.Material3.Button">
+        <item name="cornerRadius">24dp</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+
+    <style name="Widget.Pecunia.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="cornerRadius">24dp</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+
+    <style name="Widget.Pecunia.Button.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="android:minHeight">48dp</item>
+    </style>
+
+    <style name="Widget.Pecunia.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="cornerRadius">24dp</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+
+    <style name="Widget.Pecunia.Button.Elevated" parent="Widget.Material3.Button.ElevatedButton">
+        <item name="cornerRadius">24dp</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+
+    <!-- Income/Expense Buttons -->
+    <style name="Widget.Pecunia.Button.Income" parent="Widget.Material3.Button">
+        <item name="cornerRadius">24dp</item>
+        <item name="backgroundTint">@color/income</item>
+    </style>
+
+    <style name="Widget.Pecunia.Button.Expense" parent="Widget.Material3.Button">
+        <item name="cornerRadius">24dp</item>
+        <item name="backgroundTint">@color/expense</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Card Styles -->
+    <!-- ============================================ -->
+    <style name="Widget.Pecunia.CardView" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">12dp</item>
+        <item name="cardElevation">2dp</item>
+    </style>
+
+    <style name="Widget.Pecunia.CardView.Outlined" parent="Widget.Material3.CardView.Outlined">
+        <item name="cardCornerRadius">12dp</item>
+    </style>
+
+    <style name="Widget.Pecunia.CardView.Filled" parent="Widget.Material3.CardView.Filled">
+        <item name="cardCornerRadius">12dp</item>
+    </style>
+
+    <!-- Account Card -->
+    <style name="Widget.Pecunia.CardView.Account" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">4dp</item>
+    </style>
+
+    <!-- Budget Card -->
+    <style name="Widget.Pecunia.CardView.Budget" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">12dp</item>
+        <item name="cardElevation">2dp</item>
+    </style>
+
+    <!-- Summary Card -->
+    <style name="Widget.Pecunia.CardView.Summary" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">2dp</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Text Input Styles -->
+    <!-- ============================================ -->
+    <style name="Widget.Pecunia.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">8dp</item>
+        <item name="boxCornerRadiusTopEnd">8dp</item>
+        <item name="boxCornerRadiusBottomStart">8dp</item>
+        <item name="boxCornerRadiusBottomEnd">8dp</item>
+    </style>
+
+    <style name="Widget.Pecunia.TextInputLayout.Filled" parent="Widget.Material3.TextInputLayout.FilledBox">
+        <item name="boxCornerRadiusTopStart">8dp</item>
+        <item name="boxCornerRadiusTopEnd">8dp</item>
+    </style>
+
+    <!-- Amount Input -->
+    <style name="Widget.Pecunia.TextInputLayout.Amount" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">12dp</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+    </style>
+
+    <!-- Search Input -->
+    <style name="Widget.Pecunia.TextInputLayout.Search" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">28dp</item>
+        <item name="boxCornerRadiusTopEnd">28dp</item>
+        <item name="boxCornerRadiusBottomStart">28dp</item>
+        <item name="boxCornerRadiusBottomEnd">28dp</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Chip Styles -->
+    <!-- ============================================ -->
+    <style name="Widget.Pecunia.Chip" parent="Widget.Material3.Chip.Suggestion">
+        <item name="chipCornerRadius">8dp</item>
+    </style>
+
+    <style name="Widget.Pecunia.Chip.Filter" parent="Widget.Material3.Chip.Filter">
+        <item name="chipCornerRadius">8dp</item>
+    </style>
+
+    <style name="Widget.Pecunia.Chip.Input" parent="Widget.Material3.Chip.Input">
+        <item name="chipCornerRadius">8dp</item>
+    </style>
+
+    <style name="Widget.Pecunia.Chip.Category" parent="Widget.Material3.Chip.Suggestion">
+        <item name="chipCornerRadius">16dp</item>
+        <item name="chipMinHeight">32dp</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Bottom Navigation Styles -->
+    <!-- ============================================ -->
+    <style name="Widget.Pecunia.BottomNavigation" parent="Widget.Material3.BottomNavigationView">
+        <item name="itemActiveIndicatorStyle">@style/Widget.Pecunia.BottomNavigation.ActiveIndicator</item>
+    </style>
+
+    <style name="Widget.Pecunia.BottomNavigation.ActiveIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">?attr/colorSecondaryContainer</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Floating Action Button Styles -->
+    <!-- ============================================ -->
+    <style name="Widget.Pecunia.FloatingActionButton" parent="Widget.Material3.FloatingActionButton.Primary">
+        <item name="shapeAppearance">@style/ShapeAppearance.Pecunia.FAB</item>
+    </style>
+
+    <style name="Widget.Pecunia.FloatingActionButton.Small" parent="Widget.Material3.FloatingActionButton.Primary.Small">
+        <item name="shapeAppearance">@style/ShapeAppearance.Pecunia.FAB.Small</item>
+    </style>
+
+    <style name="Widget.Pecunia.FloatingActionButton.Large" parent="Widget.Material3.FloatingActionButton.Primary.Large">
+        <item name="shapeAppearance">@style/ShapeAppearance.Pecunia.FAB.Large</item>
+    </style>
+
+    <style name="Widget.Pecunia.ExtendedFloatingActionButton" parent="Widget.Material3.ExtendedFloatingActionButton.Primary">
+        <item name="shapeAppearance">@style/ShapeAppearance.Pecunia.FAB.Extended</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Shape Appearances -->
+    <!-- ============================================ -->
+    <style name="ShapeAppearance.Pecunia.SmallComponent" parent="ShapeAppearance.Material3.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">8dp</item>
+    </style>
+
+    <style name="ShapeAppearance.Pecunia.MediumComponent" parent="ShapeAppearance.Material3.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+
+    <style name="ShapeAppearance.Pecunia.LargeComponent" parent="ShapeAppearance.Material3.LargeComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <style name="ShapeAppearance.Pecunia.FAB" parent="ShapeAppearance.Material3.Corner.Medium">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <style name="ShapeAppearance.Pecunia.FAB.Small" parent="ShapeAppearance.Material3.Corner.Medium">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+
+    <style name="ShapeAppearance.Pecunia.FAB.Large" parent="ShapeAppearance.Material3.Corner.Large">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">28dp</item>
+    </style>
+
+    <style name="ShapeAppearance.Pecunia.FAB.Extended" parent="ShapeAppearance.Material3.Corner.Medium">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <style name="ShapeAppearance.Pecunia.BottomSheet" parent="ShapeAppearance.Material3.Corner.ExtraLarge">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">28dp</item>
+        <item name="cornerSizeTopRight">28dp</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
+    </style>
+
+    <style name="ShapeAppearance.Pecunia.Dialog" parent="ShapeAppearance.Material3.Corner.ExtraLarge">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">28dp</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Bottom Sheet Styles -->
+    <!-- ============================================ -->
+    <style name="Widget.Pecunia.BottomSheet" parent="Widget.Material3.BottomSheet">
+        <item name="shapeAppearance">@style/ShapeAppearance.Pecunia.BottomSheet</item>
+    </style>
+
+    <style name="Widget.Pecunia.BottomSheet.Modal" parent="Widget.Material3.BottomSheet.Modal">
+        <item name="shapeAppearance">@style/ShapeAppearance.Pecunia.BottomSheet</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Dialog Styles -->
+    <!-- ============================================ -->
+    <style name="ThemeOverlay.Pecunia.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="alertDialogStyle">@style/MaterialAlertDialog.Pecunia</item>
+        <item name="dialogCornerRadius">28dp</item>
+    </style>
+
+    <style name="MaterialAlertDialog.Pecunia" parent="MaterialAlertDialog.Material3">
+        <item name="shapeAppearance">@style/ShapeAppearance.Pecunia.Dialog</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Progress Indicator Styles -->
+    <!-- ============================================ -->
+    <style name="Widget.Pecunia.ProgressIndicator.Linear" parent="Widget.Material3.LinearProgressIndicator">
+        <item name="trackCornerRadius">4dp</item>
+        <item name="trackThickness">8dp</item>
+    </style>
+
+    <style name="Widget.Pecunia.ProgressIndicator.Circular" parent="Widget.Material3.CircularProgressIndicator">
+        <item name="indicatorSize">48dp</item>
+        <item name="trackThickness">4dp</item>
+    </style>
+
+    <!-- Budget Progress -->
+    <style name="Widget.Pecunia.ProgressIndicator.Budget" parent="Widget.Material3.LinearProgressIndicator">
+        <item name="trackCornerRadius">4dp</item>
+        <item name="trackThickness">8dp</item>
+    </style>
+
+    <!-- Goal Progress -->
+    <style name="Widget.Pecunia.ProgressIndicator.Goal" parent="Widget.Material3.CircularProgressIndicator">
+        <item name="indicatorSize">80dp</item>
+        <item name="trackThickness">8dp</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Divider Styles -->
+    <!-- ============================================ -->
+    <style name="Widget.Pecunia.Divider" parent="Widget.Material3.MaterialDivider">
+        <item name="dividerColor">@color/divider</item>
+        <item name="dividerThickness">1dp</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Toolbar Styles -->
+    <!-- ============================================ -->
+    <style name="Widget.Pecunia.Toolbar" parent="Widget.Material3.Toolbar">
+        <item name="titleTextAppearance">@style/TextAppearance.Pecunia.Toolbar.Title</item>
+    </style>
+
+    <style name="TextAppearance.Pecunia.Toolbar.Title" parent="TextAppearance.Material3.TitleLarge">
+        <item name="fontFamily">sans-serif-medium</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Snackbar Styles -->
+    <!-- ============================================ -->
+    <style name="Widget.Pecunia.Snackbar" parent="Widget.Material3.Snackbar">
+        <item name="shapeAppearance">@style/ShapeAppearance.Pecunia.SmallComponent</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Tab Layout Styles -->
+    <!-- ============================================ -->
+    <style name="Widget.Pecunia.TabLayout" parent="Widget.Material3.TabLayout">
+        <item name="tabIndicatorColor">?attr/colorPrimary</item>
+        <item name="tabSelectedTextColor">?attr/colorPrimary</item>
+        <item name="tabIndicatorFullWidth">false</item>
+        <item name="tabIndicatorHeight">3dp</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Navigation Rail Styles -->
+    <!-- ============================================ -->
+    <style name="Widget.Pecunia.NavigationRailView" parent="Widget.Material3.NavigationRailView">
+        <item name="itemActiveIndicatorStyle">@style/Widget.Pecunia.NavigationRailView.ActiveIndicator</item>
+    </style>
+
+    <style name="Widget.Pecunia.NavigationRailView.ActiveIndicator" parent="Widget.Material3.NavigationRailView.ActiveIndicator">
+        <item name="android:color">?attr/colorSecondaryContainer</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Switch Styles -->
+    <!-- ============================================ -->
+    <style name="Widget.Pecunia.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="thumbTint">@color/primary</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Checkbox Styles -->
+    <!-- ============================================ -->
+    <style name="Widget.Pecunia.CheckBox" parent="Widget.Material3.CompoundButton.CheckBox">
+        <item name="buttonTint">@color/primary</item>
+    </style>
+
+    <!-- ============================================ -->
+    <!-- Radio Button Styles -->
+    <!-- ============================================ -->
+    <style name="Widget.Pecunia.RadioButton" parent="Widget.Material3.CompoundButton.RadioButton">
+        <item name="buttonTint">@color/primary</item>
+    </style>
+
+</resources>

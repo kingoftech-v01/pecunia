@@ -1,0 +1,41 @@
+<div class="chat-message {{ message.role }}-message mb-3 {% if message.role == 'user' %}text-end{% endif %}"
+     {% if trigger_response %}hx-trigger="load" hx-get="{% url 'ai:chat-stream' session_id %}" hx-swap="beforeend" hx-target="#chat-messages"{% endif %}>
+    <div class="d-inline-block text-start {% if message.role == 'user' %}bg-primary text-white{% else %}bg-light{% endif %} rounded-3 px-3 py-2"
+         style="max-width: 80%;">
+        {% if message.role == 'assistant' %}
+        <div class="d-flex align-items-center mb-1">
+            <span class="badge bg-success bg-opacity-25 text-success me-2">
+                <i class="bi bi-robot"></i> AI
+            </span>
+            <small class="text-muted">{{ message.created_at|time:"H:i" }}</small>
+        </div>
+        {% endif %}
+
+        <div class="message-content">
+            {{ message.content|linebreaks }}
+        </div>
+
+        {% if message.role == 'user' %}
+        <small class="opacity-75 d-block mt-1">{{ message.created_at|time:"H:i" }}</small>
+        {% endif %}
+    </div>
+</div>
+
+{% if trigger_response %}
+<!-- Placeholder for streaming response -->
+<div id="streaming-response" class="chat-message assistant-message mb-3">
+    <div class="d-inline-block text-start bg-light rounded-3 px-3 py-2" style="max-width: 80%;">
+        <div class="d-flex align-items-center mb-1">
+            <span class="badge bg-success bg-opacity-25 text-success me-2">
+                <i class="bi bi-robot"></i> AI
+            </span>
+            <span class="typing-indicator">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </span>
+        </div>
+        <div class="message-content" id="streaming-content"></div>
+    </div>
+</div>
+{% endif %}

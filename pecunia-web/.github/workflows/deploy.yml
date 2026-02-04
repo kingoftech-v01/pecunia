@@ -1,0 +1,453 @@
+# Pecunia Web - Continuous Deployment Pipeline
+# Deploys to staging on develop branch, production on main branch
+
+name: CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      skip_tests:
+        description: 'Skip tests (emergency deploy)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  DOCKER_BUILDKIT: 1
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ===========================================================================
+  # Determine Environment
+  # ===========================================================================
+  setup:
+    name: Setup Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      image_tag: ${{ steps.set-env.outputs.image_tag }}
+    steps:
+      - name: Determine environment
+        id: set-env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+          else
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          fi
+          echo "image_tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+
+  # ===========================================================================
+  # Run CI Checks (unless skipped)
+  # ===========================================================================
+  ci-checks:
+    name: CI Checks
+    runs-on: ubuntu-latest
+    needs: [setup]
+    if: ${{ github.event.inputs.skip_tests != 'true' }}
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: pecunia_test
+          POSTGRES_USER: pecunia
+          POSTGRES_PASSWORD: testpassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements*.txt') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run linting
+        run: |
+          pip install ruff black isort
+          ruff check .
+          black --check .
+          isort --check-only .
+
+      - name: Run tests
+        env:
+          DJANGO_ENV: testing
+          DJANGO_SECRET_KEY: test-secret-key-for-ci
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: pecunia_test
+          DB_USER: pecunia
+          DB_PASSWORD: testpassword
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          python manage.py migrate --noinput
+          pytest --cov=apps -v --tb=short
+
+  # ===========================================================================
+  # Build and Push Docker Images
+  # ===========================================================================
+  build:
+    name: Build Images
+    runs-on: ubuntu-latest
+    needs: [setup, ci-checks]
+    if: always() && (needs.ci-checks.result == 'success' || needs.ci-checks.result == 'skipped')
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      web_digest: ${{ steps.build-web.outputs.digest }}
+      nginx_digest: ${{ steps.build-nginx.outputs.digest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Web image
+        id: build-web
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.setup.outputs.image_tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.setup.outputs.environment }}-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ needs.setup.outputs.image_tag }}
+
+      - name: Build and push Nginx image
+        id: build-nginx
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker/nginx
+          file: ./docker/nginx/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-nginx:${{ needs.setup.outputs.image_tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-nginx:${{ needs.setup.outputs.environment }}-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ===========================================================================
+  # Deploy to Staging
+  # ===========================================================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [setup, build]
+    if: needs.setup.outputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.pecunia.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.STAGING_SSH_KEY }}
+
+      - name: Add host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to staging server
+        env:
+          HOST: ${{ secrets.STAGING_HOST }}
+          USER: ${{ secrets.STAGING_USER }}
+          DEPLOY_PATH: /opt/pecunia
+          IMAGE_TAG: ${{ needs.setup.outputs.image_tag }}
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+        run: |
+          ssh $USER@$HOST << 'ENDSSH'
+            set -e
+            cd $DEPLOY_PATH
+
+            # Pull latest images
+            echo "Pulling latest images..."
+            docker pull $REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+            docker pull $REGISTRY/$IMAGE_NAME-nginx:$IMAGE_TAG
+
+            # Update image tags in docker-compose
+            export IMAGE_TAG=$IMAGE_TAG
+            export REGISTRY=$REGISTRY
+            export IMAGE_NAME=$IMAGE_NAME
+
+            # Create backup of current state
+            echo "Creating backup..."
+            docker-compose -f docker-compose.prod.yml exec -T db pg_dump -U pecunia pecunia > backup_$(date +%Y%m%d_%H%M%S).sql || true
+
+            # Deploy with zero-downtime
+            echo "Deploying new version..."
+            docker-compose -f docker-compose.prod.yml up -d --no-deps web celery-worker celery-beat
+
+            # Run migrations
+            echo "Running migrations..."
+            docker-compose -f docker-compose.prod.yml exec -T web python manage.py migrate --noinput
+
+            # Reload nginx
+            docker-compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
+
+            # Health check
+            echo "Running health check..."
+            sleep 10
+            curl -sf http://localhost/api/v1/health/ || exit 1
+
+            echo "Deployment successful!"
+          ENDSSH
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "Staging deployment successful!"
+          echo "URL: https://staging.pecunia.com"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.setup.outputs.image_tag }}"
+
+      - name: Notify deployment failure
+        if: failure()
+        run: |
+          echo "Staging deployment failed!"
+
+  # ===========================================================================
+  # Deploy to Production
+  # ===========================================================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [setup, build]
+    if: needs.setup.outputs.environment == 'production'
+    environment:
+      name: production
+      url: https://app.pecunia.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PRODUCTION_SSH_KEY }}
+
+      - name: Add host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.PRODUCTION_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to production server
+        env:
+          HOST: ${{ secrets.PRODUCTION_HOST }}
+          USER: ${{ secrets.PRODUCTION_USER }}
+          DEPLOY_PATH: /opt/pecunia
+          IMAGE_TAG: ${{ needs.setup.outputs.image_tag }}
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+        run: |
+          ssh $USER@$HOST << 'ENDSSH'
+            set -e
+            cd $DEPLOY_PATH
+
+            # Pull latest images
+            echo "Pulling latest images..."
+            docker pull $REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+            docker pull $REGISTRY/$IMAGE_NAME-nginx:$IMAGE_TAG
+
+            # Update image tags
+            export IMAGE_TAG=$IMAGE_TAG
+            export REGISTRY=$REGISTRY
+            export IMAGE_NAME=$IMAGE_NAME
+
+            # Create backup before deployment
+            echo "Creating database backup..."
+            docker-compose -f docker-compose.prod.yml exec -T db pg_dump -U pecunia pecunia > backup_pre_deploy_$(date +%Y%m%d_%H%M%S).sql
+
+            # Blue-green deployment
+            echo "Starting blue-green deployment..."
+
+            # Scale up new containers
+            docker-compose -f docker-compose.prod.yml up -d --no-deps --scale web=2 web
+
+            # Wait for new containers to be healthy
+            echo "Waiting for health checks..."
+            sleep 30
+
+            # Run migrations
+            echo "Running migrations..."
+            docker-compose -f docker-compose.prod.yml exec -T web python manage.py migrate --noinput
+
+            # Verify new deployment
+            curl -sf http://localhost:8000/api/v1/health/ || { echo "Health check failed"; exit 1; }
+
+            # Scale down old containers
+            docker-compose -f docker-compose.prod.yml up -d --no-deps --scale web=1 web
+
+            # Update other services
+            docker-compose -f docker-compose.prod.yml up -d --no-deps celery-worker celery-beat
+
+            # Reload nginx
+            docker-compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
+
+            # Final health check
+            echo "Running final health check..."
+            sleep 10
+            curl -sf https://app.pecunia.com/api/v1/health/ || exit 1
+
+            # Clean up old images
+            docker image prune -f
+
+            echo "Production deployment successful!"
+          ENDSSH
+
+      - name: Create GitHub Release
+        if: success()
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: deploy-${{ needs.setup.outputs.image_tag }}
+          release_name: Production Deploy ${{ needs.setup.outputs.image_tag }}
+          body: |
+            Automated production deployment
+            - Commit: ${{ github.sha }}
+            - Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.setup.outputs.image_tag }}
+          draft: false
+          prerelease: false
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "Production deployment successful!"
+          echo "URL: https://app.pecunia.com"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.setup.outputs.image_tag }}"
+
+      - name: Rollback on failure
+        if: failure()
+        env:
+          HOST: ${{ secrets.PRODUCTION_HOST }}
+          USER: ${{ secrets.PRODUCTION_USER }}
+          DEPLOY_PATH: /opt/pecunia
+        run: |
+          echo "Deployment failed, initiating rollback..."
+          ssh $USER@$HOST << 'ENDSSH'
+            cd $DEPLOY_PATH
+            # Rollback to previous version
+            docker-compose -f docker-compose.prod.yml up -d --no-deps web celery-worker celery-beat
+            docker-compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
+            echo "Rollback completed"
+          ENDSSH
+
+  # ===========================================================================
+  # Post-Deployment Tasks
+  # ===========================================================================
+  post-deploy:
+    name: Post-Deployment Tasks
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-staging, deploy-production]
+    if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+    steps:
+      - name: Notify Sentry of release
+        if: needs.setup.outputs.environment == 'production'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: pecunia-web
+        run: |
+          if [ -n "$SENTRY_AUTH_TOKEN" ]; then
+            curl -sL https://sentry.io/api/0/organizations/$SENTRY_ORG/releases/ \
+              -H "Authorization: Bearer $SENTRY_AUTH_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"version\": \"${{ needs.setup.outputs.image_tag }}\",
+                \"projects\": [\"$SENTRY_PROJECT\"],
+                \"refs\": [{
+                  \"repository\": \"${{ github.repository }}\",
+                  \"commit\": \"${{ github.sha }}\"
+                }]
+              }"
+          fi
+
+      - name: Run smoke tests
+        run: |
+          if [[ "${{ needs.setup.outputs.environment }}" == "production" ]]; then
+            URL="https://app.pecunia.com"
+          else
+            URL="https://staging.pecunia.com"
+          fi
+
+          echo "Running smoke tests against $URL..."
+          curl -sf "$URL/api/v1/health/" || exit 1
+          echo "Smoke tests passed!"
+
+      - name: Notify team
+        if: always()
+        run: |
+          if [[ "${{ needs.deploy-production.result }}" == "success" ]] || [[ "${{ needs.deploy-staging.result }}" == "success" ]]; then
+            echo "Deployment to ${{ needs.setup.outputs.environment }} completed successfully!"
+          else
+            echo "Deployment to ${{ needs.setup.outputs.environment }} failed!"
+          fi

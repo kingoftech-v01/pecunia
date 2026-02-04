@@ -1,0 +1,411 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================ -->
+    <!-- Primary Colors - Deep Blue for trust -->
+    <!-- ============================================ -->
+    <color name="primary">#1A5F7A</color>
+    <color name="primary_light">#4D8FA8</color>
+    <color name="primary_dark">#003D4F</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="primary_container">#D0E4FF</color>
+    <color name="on_primary_container">#001D36</color>
+
+    <!-- ============================================ -->
+    <!-- Secondary Colors - Teal for growth -->
+    <!-- ============================================ -->
+    <color name="secondary">#006A67</color>
+    <color name="secondary_light">#4D9996</color>
+    <color name="secondary_dark">#003D3B</color>
+    <color name="on_secondary">#FFFFFF</color>
+    <color name="secondary_container">#9EF2ED</color>
+    <color name="on_secondary_container">#00201F</color>
+
+    <!-- ============================================ -->
+    <!-- Tertiary Colors - Warm Gold for highlights -->
+    <!-- ============================================ -->
+    <color name="tertiary">#8B5000</color>
+    <color name="tertiary_light">#C17D33</color>
+    <color name="tertiary_dark">#5D3400</color>
+    <color name="on_tertiary">#FFFFFF</color>
+    <color name="tertiary_container">#FFDDB9</color>
+    <color name="on_tertiary_container">#2C1600</color>
+
+    <!-- ============================================ -->
+    <!-- Error Colors -->
+    <!-- ============================================ -->
+    <color name="error">#BA1A1A</color>
+    <color name="error_light">#FF5449</color>
+    <color name="error_dark">#8C0009</color>
+    <color name="on_error">#FFFFFF</color>
+    <color name="error_container">#FFDAD6</color>
+    <color name="on_error_container">#410002</color>
+
+    <!-- ============================================ -->
+    <!-- Background and Surface - Light Theme -->
+    <!-- ============================================ -->
+    <color name="background">#FCFCFF</color>
+    <color name="on_background">#1A1C1E</color>
+    <color name="surface">#FCFCFF</color>
+    <color name="on_surface">#1A1C1E</color>
+    <color name="surface_variant">#E0E2EC</color>
+    <color name="on_surface_variant">#43474E</color>
+    <color name="surface_tint">#1A5F7A</color>
+
+    <!-- Surface Levels - Light Theme -->
+    <color name="surface_dim">#DADBDF</color>
+    <color name="surface_bright">#FCFCFF</color>
+    <color name="surface_container_lowest">#FFFFFF</color>
+    <color name="surface_container_low">#F4F4F8</color>
+    <color name="surface_container">#EEEEF2</color>
+    <color name="surface_container_high">#E8E9ED</color>
+    <color name="surface_container_highest">#E3E3E7</color>
+
+    <!-- ============================================ -->
+    <!-- Background and Surface - Dark Theme -->
+    <!-- ============================================ -->
+    <color name="background_dark">#1A1C1E</color>
+    <color name="on_background_dark">#E2E2E6</color>
+    <color name="surface_dark">#1A1C1E</color>
+    <color name="on_surface_dark">#E2E2E6</color>
+    <color name="surface_variant_dark">#43474E</color>
+    <color name="on_surface_variant_dark">#C4C6D0</color>
+    <color name="surface_tint_dark">#9ECAFF</color>
+
+    <!-- Surface Levels - Dark Theme -->
+    <color name="surface_dim_dark">#1A1C1E</color>
+    <color name="surface_bright_dark">#37393C</color>
+    <color name="surface_container_lowest_dark">#0F1113</color>
+    <color name="surface_container_low_dark">#1E2022</color>
+    <color name="surface_container_dark">#222426</color>
+    <color name="surface_container_high_dark">#2D2F31</color>
+    <color name="surface_container_highest_dark">#37393C</color>
+
+    <!-- ============================================ -->
+    <!-- Dark Theme Primary Colors -->
+    <!-- ============================================ -->
+    <color name="primary_dark_theme">#9ECAFF</color>
+    <color name="on_primary_dark_theme">#003258</color>
+    <color name="primary_container_dark_theme">#00497D</color>
+    <color name="on_primary_container_dark_theme">#D0E4FF</color>
+
+    <!-- ============================================ -->
+    <!-- Dark Theme Secondary Colors -->
+    <!-- ============================================ -->
+    <color name="secondary_dark_theme">#80D5D1</color>
+    <color name="on_secondary_dark_theme">#003735</color>
+    <color name="secondary_container_dark_theme">#00504D</color>
+    <color name="on_secondary_container_dark_theme">#9EF2ED</color>
+
+    <!-- ============================================ -->
+    <!-- Dark Theme Tertiary Colors -->
+    <!-- ============================================ -->
+    <color name="tertiary_dark_theme">#FFB95B</color>
+    <color name="on_tertiary_dark_theme">#4A2800</color>
+    <color name="tertiary_container_dark_theme">#693C00</color>
+    <color name="on_tertiary_container_dark_theme">#FFDDB9</color>
+
+    <!-- ============================================ -->
+    <!-- Dark Theme Error Colors -->
+    <!-- ============================================ -->
+    <color name="error_dark_theme">#FFB4AB</color>
+    <color name="on_error_dark_theme">#690005</color>
+    <color name="error_container_dark_theme">#93000A</color>
+    <color name="on_error_container_dark_theme">#FFDAD6</color>
+
+    <!-- ============================================ -->
+    <!-- Outline Colors -->
+    <!-- ============================================ -->
+    <color name="outline">#74777F</color>
+    <color name="outline_variant">#C4C6D0</color>
+    <color name="outline_dark">#8E9199</color>
+    <color name="outline_variant_dark">#43474E</color>
+
+    <!-- ============================================ -->
+    <!-- Inverse Colors -->
+    <!-- ============================================ -->
+    <color name="inverse_surface">#2F3033</color>
+    <color name="inverse_on_surface">#F1F0F4</color>
+    <color name="inverse_primary">#9ECAFF</color>
+
+    <color name="inverse_surface_dark">#E2E2E6</color>
+    <color name="inverse_on_surface_dark">#2F3033</color>
+    <color name="inverse_primary_dark">#1A5F7A</color>
+
+    <!-- ============================================ -->
+    <!-- Scrim -->
+    <!-- ============================================ -->
+    <color name="scrim">#000000</color>
+    <color name="scrim_light">#52000000</color>
+
+    <!-- ============================================ -->
+    <!-- Finance-specific Semantic Colors -->
+    <!-- ============================================ -->
+
+    <!-- Income Colors - Green -->
+    <color name="income">#2E7D32</color>
+    <color name="income_light">#E8F5E9</color>
+    <color name="income_dark">#1B5E20</color>
+    <color name="on_income">#FFFFFF</color>
+    <color name="income_variant">#81C784</color>
+
+    <!-- Expense Colors - Red -->
+    <color name="expense">#C62828</color>
+    <color name="expense_light">#FFEBEE</color>
+    <color name="expense_dark">#8E0000</color>
+    <color name="on_expense">#FFFFFF</color>
+    <color name="expense_variant">#EF9A9A</color>
+
+    <!-- Transfer Colors - Blue -->
+    <color name="transfer">#29B6F6</color>
+    <color name="transfer_light">#E1F5FE</color>
+    <color name="transfer_dark">#0277BD</color>
+    <color name="on_transfer">#FFFFFF</color>
+    <color name="transfer_variant">#81D4FA</color>
+
+    <!-- Success Colors -->
+    <color name="success">#006D3B</color>
+    <color name="success_light">#8FF8B5</color>
+    <color name="success_dark">#00522A</color>
+    <color name="on_success">#FFFFFF</color>
+    <color name="success_container">#8FF8B5</color>
+    <color name="on_success_container">#00210E</color>
+
+    <!-- Warning Colors -->
+    <color name="warning">#7E5700</color>
+    <color name="warning_light">#FFDEA6</color>
+    <color name="warning_dark">#5F4100</color>
+    <color name="on_warning">#FFFFFF</color>
+    <color name="warning_container">#FFDEA6</color>
+    <color name="on_warning_container">#271900</color>
+
+    <!-- Info Colors -->
+    <color name="info">#0061A4</color>
+    <color name="info_light">#D1E4FF</color>
+    <color name="info_dark">#00497D</color>
+    <color name="on_info">#FFFFFF</color>
+    <color name="info_container">#D1E4FF</color>
+    <color name="on_info_container">#001D36</color>
+
+    <!-- ============================================ -->
+    <!-- Budget Status Colors -->
+    <!-- ============================================ -->
+    <color name="budget_on_track">#4CAF50</color>
+    <color name="budget_warning">#FF9800</color>
+    <color name="budget_danger">#F44336</color>
+    <color name="budget_exceeded">#9C27B0</color>
+    <color name="budget_unused">#9E9E9E</color>
+
+    <!-- ============================================ -->
+    <!-- Goal Progress Colors -->
+    <!-- ============================================ -->
+    <color name="goal_not_started">#9E9E9E</color>
+    <color name="goal_in_progress">#1A5F7A</color>
+    <color name="goal_almost_there">#FF9800</color>
+    <color name="goal_completed">#2E7D32</color>
+    <color name="goal_overdue">#EF5350</color>
+
+    <!-- ============================================ -->
+    <!-- Trend Indicator Colors -->
+    <!-- ============================================ -->
+    <color name="trend_up">#4CAF50</color>
+    <color name="trend_up_light">#E8F5E9</color>
+    <color name="trend_down">#F44336</color>
+    <color name="trend_down_light">#FFEBEE</color>
+    <color name="trend_neutral">#9E9E9E</color>
+    <color name="trend_neutral_light">#F5F5F5</color>
+
+    <!-- ============================================ -->
+    <!-- Category Colors -->
+    <!-- ============================================ -->
+    <!-- Income Categories -->
+    <color name="category_salary">#2E7D32</color>
+    <color name="category_investment">#1565C0</color>
+    <color name="category_freelance">#7B1FA2</color>
+    <color name="category_gift">#E91E63</color>
+    <color name="category_refund">#00ACC1</color>
+    <color name="category_bonus">#00897B</color>
+    <color name="category_interest">#3949AB</color>
+    <color name="category_dividend">#5E35B1</color>
+    <color name="category_rental">#8D6E63</color>
+    <color name="category_other_income">#43A047</color>
+
+    <!-- Expense Categories -->
+    <color name="category_food">#FF5722</color>
+    <color name="category_groceries">#8BC34A</color>
+    <color name="category_restaurants">#FF7043</color>
+    <color name="category_transport">#5C6BC0</color>
+    <color name="category_fuel">#455A64</color>
+    <color name="category_public_transport">#42A5F5</color>
+    <color name="category_shopping">#EC407A</color>
+    <color name="category_clothing">#AB47BC</color>
+    <color name="category_electronics">#5C6BC0</color>
+    <color name="category_entertainment">#AB47BC</color>
+    <color name="category_movies">#7E57C2</color>
+    <color name="category_games">#9C27B0</color>
+    <color name="category_music">#E91E63</color>
+    <color name="category_bills">#42A5F5</color>
+    <color name="category_electricity">#FFCA28</color>
+    <color name="category_water">#29B6F6</color>
+    <color name="category_internet">#26C6DA</color>
+    <color name="category_phone">#66BB6A</color>
+    <color name="category_health">#EF5350</color>
+    <color name="category_medical">#E53935</color>
+    <color name="category_pharmacy">#FF8A80</color>
+    <color name="category_fitness">#26A69A</color>
+    <color name="category_education">#26A69A</color>
+    <color name="category_books">#8D6E63</color>
+    <color name="category_courses">#00ACC1</color>
+    <color name="category_travel">#FF7043</color>
+    <color name="category_hotel">#FFB74D</color>
+    <color name="category_flight">#29B6F6</color>
+    <color name="category_housing">#8D6E63</color>
+    <color name="category_rent">#795548</color>
+    <color name="category_mortgage">#6D4C41</color>
+    <color name="category_maintenance">#A1887F</color>
+    <color name="category_insurance">#78909C</color>
+    <color name="category_subscriptions">#7E57C2</color>
+    <color name="category_personal">#FFCA28</color>
+    <color name="category_beauty">#FF80AB</color>
+    <color name="category_family">#66BB6A</color>
+    <color name="category_kids">#4CAF50</color>
+    <color name="category_pets">#D4E157</color>
+    <color name="category_charity">#FF8A65</color>
+    <color name="category_donations">#FFAB91</color>
+    <color name="category_taxes">#90A4AE</color>
+    <color name="category_fees">#B0BEC5</color>
+    <color name="category_other_expense">#9E9E9E</color>
+
+    <!-- Transfer Category -->
+    <color name="category_transfer">#29B6F6</color>
+    <color name="category_savings">#00BCD4</color>
+
+    <!-- ============================================ -->
+    <!-- Account Type Colors -->
+    <!-- ============================================ -->
+    <color name="account_checking">#1A5F7A</color>
+    <color name="account_savings">#2E7D32</color>
+    <color name="account_credit_card">#EF5350</color>
+    <color name="account_investment">#7B1FA2</color>
+    <color name="account_cash">#FF9800</color>
+    <color name="account_loan">#8D6E63</color>
+    <color name="account_crypto">#00ACC1</color>
+    <color name="account_retirement">#5C6BC0</color>
+    <color name="account_business">#455A64</color>
+    <color name="account_other">#78909C</color>
+
+    <!-- ============================================ -->
+    <!-- Chart Colors -->
+    <!-- ============================================ -->
+    <color name="chart_1">#1A5F7A</color>
+    <color name="chart_2">#2E7D32</color>
+    <color name="chart_3">#FF5722</color>
+    <color name="chart_4">#7B1FA2</color>
+    <color name="chart_5">#00ACC1</color>
+    <color name="chart_6">#E91E63</color>
+    <color name="chart_7">#8D6E63</color>
+    <color name="chart_8">#5C6BC0</color>
+    <color name="chart_9">#FFCA28</color>
+    <color name="chart_10">#26A69A</color>
+    <color name="chart_11">#EF5350</color>
+    <color name="chart_12">#78909C</color>
+
+    <!-- Chart Specific -->
+    <color name="chart_income">#2E7D32</color>
+    <color name="chart_expense">#EF5350</color>
+    <color name="chart_balance">#1A5F7A</color>
+    <color name="chart_savings">#00ACC1</color>
+    <color name="chart_budget">#FF9800</color>
+    <color name="chart_goal">#7B1FA2</color>
+    <color name="chart_trend">#5C6BC0</color>
+    <color name="chart_average">#78909C</color>
+    <color name="chart_grid">#E0E0E0</color>
+    <color name="chart_grid_dark">#424242</color>
+
+    <!-- ============================================ -->
+    <!-- Notification Colors -->
+    <!-- ============================================ -->
+    <color name="notification_info">#2196F3</color>
+    <color name="notification_success">#4CAF50</color>
+    <color name="notification_warning">#FF9800</color>
+    <color name="notification_error">#F44336</color>
+    <color name="notification_reminder">#9C27B0</color>
+
+    <!-- ============================================ -->
+    <!-- Security Status Colors -->
+    <!-- ============================================ -->
+    <color name="security_secure">#4CAF50</color>
+    <color name="security_warning">#FF9800</color>
+    <color name="security_danger">#F44336</color>
+    <color name="security_locked">#9E9E9E</color>
+    <color name="security_verified">#2196F3</color>
+
+    <!-- ============================================ -->
+    <!-- Status Bar and Navigation Bar -->
+    <!-- ============================================ -->
+    <color name="status_bar_light">#FCFCFF</color>
+    <color name="status_bar_dark">#1A1C1E</color>
+    <color name="navigation_bar_light">#FCFCFF</color>
+    <color name="navigation_bar_dark">#1A1C1E</color>
+
+    <!-- ============================================ -->
+    <!-- Dividers -->
+    <!-- ============================================ -->
+    <color name="divider">#E0E0E0</color>
+    <color name="divider_dark">#424242</color>
+
+    <!-- ============================================ -->
+    <!-- Ripple -->
+    <!-- ============================================ -->
+    <color name="ripple_light">#1F000000</color>
+    <color name="ripple_dark">#1FFFFFFF</color>
+
+    <!-- ============================================ -->
+    <!-- Disabled States -->
+    <!-- ============================================ -->
+    <color name="disabled">#61000000</color>
+    <color name="disabled_dark">#61FFFFFF</color>
+    <color name="disabled_container">#1F000000</color>
+    <color name="disabled_container_dark">#1FFFFFFF</color>
+
+    <!-- ============================================ -->
+    <!-- Text Colors -->
+    <!-- ============================================ -->
+    <color name="text_primary">#1A1C1E</color>
+    <color name="text_secondary">#43474E</color>
+    <color name="text_tertiary">#74777F</color>
+    <color name="text_disabled">#A0A4AB</color>
+
+    <color name="text_primary_dark">#E2E2E6</color>
+    <color name="text_secondary_dark">#C4C6D0</color>
+    <color name="text_tertiary_dark">#8E9199</color>
+    <color name="text_disabled_dark">#5C5F66</color>
+
+    <!-- ============================================ -->
+    <!-- Gradient Colors (for reference in drawables) -->
+    <!-- ============================================ -->
+    <color name="gradient_primary_start">#1A5F7A</color>
+    <color name="gradient_primary_end">#2E8BC0</color>
+    <color name="gradient_success_start">#2E7D32</color>
+    <color name="gradient_success_end">#66BB6A</color>
+    <color name="gradient_warning_start">#FF9800</color>
+    <color name="gradient_warning_end">#FFCA28</color>
+    <color name="gradient_error_start">#EF5350</color>
+    <color name="gradient_error_end">#FF8A80</color>
+    <color name="gradient_premium_start">#8B5000</color>
+    <color name="gradient_premium_end">#FFB95B</color>
+
+    <!-- ============================================ -->
+    <!-- Shimmer Effect Colors -->
+    <!-- ============================================ -->
+    <color name="shimmer_base">#E0E0E0</color>
+    <color name="shimmer_highlight">#F5F5F5</color>
+    <color name="shimmer_base_dark">#424242</color>
+    <color name="shimmer_highlight_dark">#616161</color>
+
+    <!-- ============================================ -->
+    <!-- Selection Colors -->
+    <!-- ============================================ -->
+    <color name="selection">#331A5F7A</color>
+    <color name="selection_dark">#339ECAFF</color>
+    <color name="highlight">#80FFFF00</color>
+</resources>
