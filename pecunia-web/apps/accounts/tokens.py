@@ -6,7 +6,7 @@ Implements secure, time-limited tokens with cryptographic signing.
 import hashlib
 import hmac
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from typing import Optional, Tuple
 
 from django.conf import settings
@@ -76,7 +76,7 @@ class BaseTokenGenerator:
         try:
             ts_b36, _ = token.split("-", 1)
             ts = base36_to_int(ts_b36)
-            return datetime.fromtimestamp(ts, tz=timezone.utc)
+            return datetime.fromtimestamp(ts, tz=dt_timezone.utc)
         except (ValueError, TypeError):
             return None
 

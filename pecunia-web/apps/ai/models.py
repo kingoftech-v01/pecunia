@@ -315,6 +315,55 @@ class AIConversation(models.Model):
         self.save(update_fields=['messages', 'updated_at'])
 
 
+class ChatSession(models.Model):
+    """
+    Chat session for the AI assistant.
+
+    Groups related chat messages into a session.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='chat_sessions'
+    )
+    title = models.CharField(max_length=255, blank=True, default='')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        verbose_name = 'Chat Session'
+        verbose_name_plural = 'Chat Sessions'
+
+    def __str__(self):
+        return f"Chat Session {self.id} - {self.user}"
+
+
+class ChatMessage(models.Model):
+    """
+    Individual message in a chat session.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    session = models.ForeignKey(
+        ChatSession,
+        on_delete=models.CASCADE,
+        related_name='messages'
+    )
+    role = models.CharField(max_length=20, choices=[('user', 'User'), ('assistant', 'Assistant')])
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = 'Chat Message'
+        verbose_name_plural = 'Chat Messages'
+
+    def __str__(self):
+        return f"{self.role}: {self.content[:50]}"
+
+
 class AIUsageLog(models.Model):
     """
     AI API usage logging for cost tracking.

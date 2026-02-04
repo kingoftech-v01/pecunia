@@ -32,6 +32,30 @@ class SubscriptionPlan(models.Model):
         help_text="URL-friendly identifier for the plan"
     )
 
+    # Plan tier
+    TIER_CHOICES = [
+        ('free', 'Free'),
+        ('premium', 'Premium'),
+        ('pro', 'Professional'),
+        ('business', 'Business'),
+    ]
+    tier = models.CharField(
+        max_length=20,
+        choices=TIER_CHOICES,
+        default='free',
+        help_text="Subscription tier level"
+    )
+    description = models.TextField(
+        blank=True,
+        default='',
+        help_text="Description of the plan"
+    )
+    currency = models.CharField(
+        max_length=3,
+        default='EUR',
+        help_text="Three-letter ISO currency code"
+    )
+
     # Stripe Price IDs
     stripe_price_id_monthly = models.CharField(
         max_length=255,
@@ -73,6 +97,29 @@ class SubscriptionPlan(models.Model):
         blank=True,
         help_text="Usage limits for this plan (e.g., {'accounts': 5, 'transactions_per_month': 1000, 'budgets': 10})"
     )
+
+    # Feature limits
+    max_bank_accounts = models.PositiveIntegerField(default=1)
+    max_budgets = models.PositiveIntegerField(default=3)
+    max_transactions_per_month = models.PositiveIntegerField(default=100)
+    max_categories = models.PositiveIntegerField(default=10)
+    max_family_members = models.PositiveIntegerField(default=0)
+
+    # Feature flags
+    ai_categorization = models.BooleanField(default=False)
+    ai_insights = models.BooleanField(default=False)
+    export_csv = models.BooleanField(default=True)
+    export_pdf = models.BooleanField(default=False)
+    bank_sync = models.BooleanField(default=False)
+    recurring_transactions = models.BooleanField(default=False)
+    custom_categories = models.BooleanField(default=False)
+    budget_alerts = models.BooleanField(default=False)
+    multi_currency = models.BooleanField(default=False)
+    priority_support = models.BooleanField(default=False)
+    api_access = models.BooleanField(default=False)
+
+    # Display
+    is_featured = models.BooleanField(default=False)
 
     # Plan management
     is_active = models.BooleanField(
@@ -118,6 +165,11 @@ class SubscriptionPlan(models.Model):
             return 0
         savings = ((yearly_from_monthly - self.price_yearly) / yearly_from_monthly) * 100
         return int(savings)
+
+    @property
+    def yearly_savings(self) -> int:
+        """Alias for yearly_savings_percentage for serializer compatibility."""
+        return self.yearly_savings_percentage
 
     def get_limit(self, key: str, default=None):
         """Get a specific limit value from the limits JSON."""
@@ -251,6 +303,25 @@ class Subscription(models.Model):
             return None
         delta = self.current_period_end - timezone.now()
         return max(0, delta.days)
+
+    @property
+    def billing_interval(self) -> str:
+        """Alias for billing_cycle for serializer compatibility."""
+        return self.billing_cycle
+
+    @billing_interval.setter
+    def billing_interval(self, value):
+        self.billing_cycle = value
+
+    @property
+    def is_on_trial(self) -> bool:
+        """Check if subscription is on trial (alias for is_trialing)."""
+        return self.is_trialing
+
+    @property
+    def tier(self) -> str:
+        """Return the plan's tier."""
+        return self.plan.tier if self.plan else 'free'
 
     @property
     def is_canceled(self) -> bool:
@@ -429,3 +500,62 @@ class PaymentHistory(models.Model):
         }
         symbol = currency_symbols.get(self.currency.upper(), self.currency)
         return f"{symbol}{self.amount:.2f}"
+
+
+class SubscriptionEvent(models.Model):
+    """
+    Logs subscription lifecycle events for audit trail.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    subscription = models.ForeignKey(
+        Subscription,
+        on_delete=models.CASCADE,
+        related_name='events'
+    )
+    event_type = models.CharField(max_length=50)
+    description = models.TextField(blank=True, default='')
+    stripe_event_id = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Subscription Event'
+        verbose_name_plural = 'Subscription Events'
+
+    def __str__(self):
+        return f"{self.event_type} - {self.subscription}"
+
+
+class Invoice(models.Model):
+    """
+    Invoice records for subscription payments.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    subscription = models.ForeignKey(
+        Subscription,
+        on_delete=models.CASCADE,
+        related_name='invoices'
+    )
+    stripe_invoice_id = models.CharField(max_length=255, unique=True, blank=True, null=True)
+    stripe_payment_intent_id = models.CharField(max_length=255, blank=True, null=True)
+    invoice_number = models.CharField(max_length=100, blank=True, default='')
+    amount_due = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    currency = models.CharField(max_length=3, default='EUR')
+    status = models.CharField(max_length=20, default='open')
+    invoice_pdf_url = models.URLField(max_length=500, blank=True, default='')
+    hosted_invoice_url = models.URLField(max_length=500, blank=True, default='')
+    period_start = models.DateTimeField(null=True, blank=True)
+    period_end = models.DateTimeField(null=True, blank=True)
+    due_date = models.DateTimeField(null=True, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Invoice'
+        verbose_name_plural = 'Invoices'
+
+    def __str__(self):
+        return f"Invoice {self.invoice_number} - {self.amount_due} {self.currency}"

@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.conf import settings
+from django.db import models
 from django.db.models import Sum, Count, Avg
 from django.http import StreamingHttpResponse
 from django.utils import timezone
@@ -215,7 +216,7 @@ class CategorizeView(APIView):
 
         # Get user's categories
         categories = TransactionCategory.objects.filter(
-            models.Q(user=user) | models.Q(is_system=True)
+            models.Q(user=user) | models.Q(is_default=True)
         ).values('id', 'name', 'icon')
 
         # Build prompt for AI

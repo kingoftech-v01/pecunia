@@ -6,7 +6,7 @@ from django.apps import AppConfig
 
 class BankingConfig(AppConfig):
     """Configuration for the banking application."""
-    default_auto_field = 'django.db.models.UUIDField'
+    default_auto_field = 'django.db.models.BigAutoField'
     name = 'apps.banking'
     verbose_name = 'Banking Connections'
 

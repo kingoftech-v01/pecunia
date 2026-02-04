@@ -6,7 +6,7 @@ Uses idempotency keys and webhook signature verification.
 """
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone
 from decimal import Decimal
 from typing import Any
 
@@ -930,6 +930,35 @@ class StripeService:
         except stripe.error.StripeError as e:
             logger.error(f"Failed to retrieve customer {customer_id}: {e}")
             return None
+
+    def get_subscription(self, subscription_id: str) -> dict | None:
+        """
+        Retrieve a Stripe subscription by ID.
+
+        Args:
+            subscription_id: Stripe subscription ID
+
+        Returns:
+            Stripe Subscription object or None
+        """
+        try:
+            return stripe.Subscription.retrieve(subscription_id, api_key=self.api_key)
+        except stripe.error.StripeError as e:
+            logger.error(f"Failed to retrieve subscription {subscription_id}: {e}")
+            return None
+
+    def timestamp_to_datetime(self, timestamp: int) -> datetime:
+        """Convert a Unix timestamp to a datetime object."""
+        return datetime.fromtimestamp(timestamp, tz=dt_timezone.utc)
+
+    def amount_to_decimal(self, amount: int, currency: str = 'eur') -> Decimal:
+        """Convert a Stripe amount (in cents) to a Decimal."""
+        # Zero-decimal currencies don't need division
+        zero_decimal_currencies = {'bif', 'clp', 'djf', 'gnf', 'jpy', 'kmf', 'krw',
+                                   'mga', 'pyg', 'rwf', 'ugx', 'vnd', 'vuv', 'xaf', 'xof', 'xpf'}
+        if currency.lower() in zero_decimal_currencies:
+            return Decimal(str(amount))
+        return Decimal(str(amount)) / 100
 
     def get_payment_methods(self, customer_id: str, pm_type: str = 'card') -> list:
         """

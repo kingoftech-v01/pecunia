@@ -11,6 +11,7 @@ from datetime import datetime, date
 from decimal import Decimal
 from typing import Any, BinaryIO, Dict, List, Optional, TextIO, Union
 import defusedxml.ElementTree as ET
+from xml.etree.ElementTree import Element as _Element
 
 from .base import (
     BaseImporter,
@@ -201,7 +202,7 @@ class OFXParser:
 
         return result
 
-    def _extract_account_info(self, element: ET.Element) -> Dict[str, Any]:
+    def _extract_account_info(self, element: _Element) -> Dict[str, Any]:
         """Extract account information from statement."""
         info = {}
 
@@ -219,7 +220,7 @@ class OFXParser:
 
         return info
 
-    def _extract_transactions(self, banktranlist: ET.Element) -> List[Dict[str, Any]]:
+    def _extract_transactions(self, banktranlist: _Element) -> List[Dict[str, Any]]:
         """Extract transactions from bank transaction list."""
         transactions = []
 
@@ -231,7 +232,7 @@ class OFXParser:
 
         return transactions
 
-    def _parse_transaction(self, element: ET.Element) -> Optional[Dict[str, Any]]:
+    def _parse_transaction(self, element: _Element) -> Optional[Dict[str, Any]]:
         """Parse a single transaction element."""
         tx = {}
 
@@ -258,7 +259,7 @@ class OFXParser:
 
         return tx if tx else None
 
-    def _extract_balance(self, element: ET.Element) -> Optional[Dict[str, Any]]:
+    def _extract_balance(self, element: _Element) -> Optional[Dict[str, Any]]:
         """Extract balance information."""
         balance = {}
 

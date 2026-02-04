@@ -7,7 +7,11 @@ from django.db.models import Sum
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
-from .models import Budget, BudgetItem, BudgetAlert
+from .models import Budget, BudgetItem
+try:
+    from .models import BudgetAlert
+except ImportError:
+    BudgetAlert = None
 
 
 class BudgetItemInline(admin.TabularInline):
@@ -357,7 +361,7 @@ class BudgetItemAdmin(admin.ModelAdmin):
         )
 
 
-@admin.register(BudgetAlert)
+@admin.register(BudgetAlert) if BudgetAlert else lambda cls: cls
 class BudgetAlertAdmin(admin.ModelAdmin):
     """Admin configuration for BudgetAlert model."""
 

@@ -55,7 +55,7 @@ urlpatterns = [
 
 # Optional: Test webhook endpoint (only in DEBUG mode)
 from django.conf import settings
-if settings.DEBUG:
+if settings.DEBUG and hasattr(webhooks, 'stripe_webhook_test'):
     urlpatterns.insert(
         -1,  # Insert before router URLs
         path('webhooks/stripe/test/', webhooks.stripe_webhook_test, name='webhook-stripe-test'),

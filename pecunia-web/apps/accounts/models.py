@@ -8,6 +8,11 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 from django.utils import timezone
 
+# Import additional models so Django discovers them for migrations
+# These are defined in separate files but belong to the 'accounts' app
+from apps.accounts.totp import TOTPDevice  # noqa: F401
+from apps.accounts.backup_codes import BackupCode  # noqa: F401
+
 
 class UserManager(BaseUserManager):
     """Custom user manager for email-based authentication."""
