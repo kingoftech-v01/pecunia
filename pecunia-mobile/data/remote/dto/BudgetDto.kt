@@ -71,7 +71,11 @@ data class BudgetDto(
             budgetAmount = budgetAmount,
             spentAmount = spentAmount,
             currency = currency,
-            periodType = BudgetPeriodType.valueOf(periodType.uppercase()),
+            periodType = try {
+                BudgetPeriodType.valueOf(periodType.uppercase())
+            } catch (e: IllegalArgumentException) {
+                BudgetPeriodType.MONTHLY // Safe fallback for unknown server values
+            },
             startDate = startDate,
             endDate = endDate,
             isActive = isActive,

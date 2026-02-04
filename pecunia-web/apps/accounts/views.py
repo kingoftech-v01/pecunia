@@ -52,12 +52,15 @@ Related:
 - Token storage requirements in SECURITY_GUIDELINES.md
 - Client implementations in desktop/mobile apps
 """
-from rest_framework import viewsets, status, permissions
+import logging
+
+from rest_framework import viewsets, status, permissions, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import logout
 
 from .models import User, UserProfile
@@ -68,6 +71,9 @@ from .serializers import (
     UserProfileSerializer,
     ChangePasswordSerializer,
 )
+from .totp import TOTPService
+
+logger = logging.getLogger(__name__)
 
 
 class RegisterAPIView(APIView):
@@ -85,15 +91,11 @@ class RegisterAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # Generate tokens
-        refresh = RefreshToken.for_user(user)
-
+        # Do not issue full JWT tokens until email is verified.
+        # Return user data with a message to verify email.
         return Response({
             'user': UserSerializer(user).data,
-            'tokens': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            }
+            'detail': 'Account created. Please verify your email address before logging in.',
         }, status=status.HTTP_201_CREATED)
 
 
@@ -111,6 +113,22 @@ class LoginAPIView(APIView):
         serializer = UserLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
+
+        # Check if 2FA is enabled for this user
+        totp_service = TOTPService()
+        if totp_service.is_2fa_enabled(user):
+            totp_code = request.data.get('totp_code')
+            if not totp_code:
+                # 2FA is required but no code provided - return partial auth
+                return Response({
+                    'requires_2fa': True,
+                    'detail': 'Two-factor authentication code required.',
+                }, status=status.HTTP_200_OK)
+
+            if not totp_service.verify_token(user, totp_code):
+                return Response({
+                    'detail': 'Invalid two-factor authentication code.',
+                }, status=status.HTTP_401_UNAUTHORIZED)
 
         # Generate tokens
         refresh = RefreshToken.for_user(user)
@@ -139,18 +157,25 @@ class LogoutAPIView(APIView):
             refresh_token = request.data.get('refresh')
             if refresh_token:
                 token = RefreshToken(refresh_token)
+                # Validate that the token belongs to the authenticated user
+                user_id = token.payload.get('user_id')
+                if str(user_id) != str(request.user.id):
+                    return Response(
+                        {'detail': 'Token does not belong to the authenticated user.'},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
                 token.blacklist()
             return Response({'detail': 'Successfully logged out.'})
-        except Exception:
+        except TokenError:
             return Response(
                 {'detail': 'Invalid token.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
     """
-    ViewSet for user CRUD operations.
+    ViewSet for user read/update operations.
 
     Endpoints:
     - GET /api/v1/accounts/users/me/ - Current user details
@@ -159,6 +184,7 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'patch', 'post', 'head', 'options']
 
     def get_queryset(self):
         """Return only the current user."""
@@ -186,7 +212,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='me/change-password')
     def change_password(self, request):
-        """Change user password."""
+        """Change user password and invalidate existing tokens."""
         serializer = ChangePasswordSerializer(
             data=request.data,
             context={'request': request}
@@ -196,7 +222,20 @@ class UserViewSet(viewsets.ModelViewSet):
         request.user.set_password(serializer.validated_data['new_password'])
         request.user.save()
 
-        return Response({'detail': 'Password changed successfully.'})
+        # Invalidate all existing refresh tokens for this user
+        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+        OutstandingToken.objects.filter(user=request.user).delete()
+
+        # Issue new tokens
+        refresh = RefreshToken.for_user(request.user)
+
+        return Response({
+            'detail': 'Password changed successfully. All sessions invalidated.',
+            'tokens': {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }
+        })
 
 
 class UserProfileViewSet(viewsets.ModelViewSet):

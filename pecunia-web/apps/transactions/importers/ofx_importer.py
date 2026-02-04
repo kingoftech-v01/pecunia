@@ -10,7 +10,7 @@ import re
 from datetime import datetime, date
 from decimal import Decimal
 from typing import Any, BinaryIO, Dict, List, Optional, TextIO, Union
-from xml.etree import ElementTree as ET
+import defusedxml.ElementTree as ET
 
 from .base import (
     BaseImporter,

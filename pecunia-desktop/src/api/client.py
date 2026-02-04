@@ -149,9 +149,13 @@ class ValidationError(APIError):
     pass
 
 
-class TimeoutError(APIError):
+class APITimeoutError(APIError):
     """Raised when request times out."""
     pass
+
+
+# Alias to avoid shadowing builtin TimeoutError
+TimeoutError = APITimeoutError  # Deprecated: use APITimeoutError instead
 
 
 class APIClient:
@@ -367,6 +371,22 @@ class APIClient:
         async with self._session_lock:
             if self._session is None or self._session.closed:
                 timeout = ClientTimeout(total=self._timeout)
+                if not self._verify_ssl:
+                    config = get_config()
+                    env = getattr(config, 'environment', 'production')
+                    if env == 'production':
+                        logger.error(
+                            "SSL verification is disabled in production! "
+                            "Refusing to create insecure connection."
+                        )
+                        raise APIError(
+                            "SSL verification cannot be disabled in production"
+                        )
+                    else:
+                        logger.warning(
+                            "SSL verification is disabled. "
+                            "This is acceptable only in development/testing."
+                        )
                 connector = TCPConnector(
                     ssl=self._verify_ssl if self._verify_ssl else False,
                     limit=self._max_connections,
@@ -475,7 +495,7 @@ class APIClient:
             return True
 
         # Retry on timeout errors
-        if isinstance(error, TimeoutError):
+        if isinstance(error, APITimeoutError):
             return True
 
         # Retry on server errors (5xx)
@@ -593,7 +613,7 @@ class APIClient:
 
         except asyncio.TimeoutError as e:
             logger.error(f"Request timeout: {context.url}")
-            raise TimeoutError("Request timed out. Please try again.") from e
+            raise APITimeoutError("Request timed out. Please try again.") from e
 
         except Exception as e:
             logger.exception(f"Unexpected error during request: {e}")
@@ -724,7 +744,7 @@ class APIClient:
 
                 return response
 
-            except (NetworkError, TimeoutError) as e:
+            except (NetworkError, APITimeoutError) as e:
                 last_error = e
                 if self._should_retry(e, attempt):
                     delay = self._calculate_retry_delay(attempt)
@@ -927,7 +947,7 @@ async def close_api_client():
 
 def with_retry(
     max_retries: int = API_MAX_RETRIES,
-    retry_on: tuple = (NetworkError, TimeoutError),
+    retry_on: tuple = (NetworkError, APITimeoutError),
 ):
     """
     Decorator to add retry logic to async functions.

@@ -49,7 +49,13 @@ class WebhookIdempotencyManager:
     @classmethod
     def is_event_processed(cls, event_id: str) -> bool:
         """Check if event has already been processed."""
-        return cache.get(cls.get_cache_key(event_id)) is not None
+        if cache.get(cls.get_cache_key(event_id)) is not None:
+            return True
+        # Fallback to database check in case cache was evicted
+        if SubscriptionEvent.objects.filter(stripe_event_id=event_id).exists():
+            cls.mark_event_processed(event_id)
+            return True
+        return False
 
     @classmethod
     def mark_event_processed(cls, event_id: str) -> None:
@@ -651,9 +657,9 @@ def stripe_webhook(request: HttpRequest) -> HttpResponse:
     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', '')
 
     # Verify webhook signature and construct event
-    event = stripe_service.construct_webhook_event(payload, sig_header)
-
-    if not event:
+    try:
+        event = stripe_service.verify_webhook_signature(payload, sig_header)
+    except Exception:
         logger.error("Webhook signature verification failed")
         return HttpResponse(
             json.dumps({'error': 'Invalid signature'}),
@@ -704,58 +710,12 @@ def stripe_webhook(request: HttpRequest) -> HttpResponse:
             event_type=event_type,
             event_id=event_id,
             error=e,
-            context={'payload_preview': str(payload)[:500]}
+            context={'event_type': event_type, 'event_id': event_id}
         )
 
         # Return 500 to trigger Stripe retry
         return HttpResponse(
-            json.dumps({'error': str(e)}),
-            status=500,
-            content_type='application/json'
-        )
-
-
-# =============================================================================
-# Additional Webhook Endpoints (for testing/debugging)
-# =============================================================================
-
-@csrf_exempt
-@require_POST
-def stripe_webhook_test(request: HttpRequest) -> HttpResponse:
-    """
-    Test webhook endpoint (only available in DEBUG mode).
-
-    Accepts unverified webhooks for local development.
-    """
-    if not settings.DEBUG:
-        return HttpResponse(status=404)
-
-    try:
-        payload = json.loads(request.body)
-        event_type = payload.get('type', 'unknown')
-        event_id = payload.get('id', f'test_{timezone.now().timestamp()}')
-        data = payload.get('data', {}).get('object', {})
-
-        logger.info(f"Test webhook received: {event_type}")
-
-        handled = route_webhook_event(event_type, data, payload)
-
-        return HttpResponse(
-            json.dumps({'status': 'success', 'handled': handled, 'test_mode': True}),
-            status=200,
-            content_type='application/json'
-        )
-
-    except json.JSONDecodeError:
-        return HttpResponse(
-            json.dumps({'error': 'Invalid JSON'}),
-            status=400,
-            content_type='application/json'
-        )
-    except Exception as e:
-        logger.error(f"Test webhook error: {e}")
-        return HttpResponse(
-            json.dumps({'error': str(e)}),
+            json.dumps({'error': 'Internal webhook processing error'}),
             status=500,
             content_type='application/json'
         )

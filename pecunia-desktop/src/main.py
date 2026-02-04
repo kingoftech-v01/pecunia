@@ -1183,7 +1183,12 @@ class Application:
 
             if reply == QMessageBox.StandardButton.Yes:
                 import webbrowser
-                webbrowser.open(download_url)
+                from urllib.parse import urlparse
+                parsed = urlparse(download_url)
+                if parsed.scheme in ('https', 'http') and parsed.hostname:
+                    webbrowser.open(download_url)
+                else:
+                    logger.warning(f"Blocked opening URL with invalid scheme or host: {parsed.scheme}")
 
     def run(self) -> int:
         """

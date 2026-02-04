@@ -83,7 +83,7 @@ class ChatMessageSerializer(serializers.Serializer):
     """Serializer for chat messages."""
 
     role = serializers.ChoiceField(
-        choices=['user', 'assistant', 'system'],
+        choices=['user', 'assistant'],
         default='user'
     )
     content = serializers.CharField(

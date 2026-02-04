@@ -60,14 +60,15 @@ wait_for_postgres() {
     local retries=0
     while [ $retries -lt $DB_MAX_RETRIES ]; do
         if python -c "
+import os
 import psycopg
 try:
     conn = psycopg.connect(
-        host='${DB_HOST}',
-        port='${DB_PORT}',
-        dbname='${DB_NAME}',
-        user='${DB_USER}',
-        password='${DB_PASSWORD}',
+        host=os.environ.get('DB_HOST', 'db'),
+        port=os.environ.get('DB_PORT', '5432'),
+        dbname=os.environ.get('DB_NAME', 'pecunia'),
+        user=os.environ.get('DB_USER', 'pecunia'),
+        password=os.environ.get('DB_PASSWORD', ''),
         connect_timeout=5
     )
     conn.close()
@@ -97,9 +98,10 @@ wait_for_redis() {
     local retries=0
     while [ $retries -lt $REDIS_MAX_RETRIES ]; do
         if python -c "
+import os
 import redis
 try:
-    r = redis.from_url('${REDIS_URL}', socket_connect_timeout=5)
+    r = redis.from_url(os.environ.get('REDIS_URL', 'redis://redis:6379/0'), socket_connect_timeout=5)
     r.ping()
     exit(0)
 except Exception as e:

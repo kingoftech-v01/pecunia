@@ -268,9 +268,17 @@ class TransactionRepository @Inject constructor(
 
             // Try to delete on server
             try {
-                apiService.deleteTransaction(transactionId)
+                val response = apiService.deleteTransaction(transactionId)
+                if (!response.isSuccessful) {
+                    // Server-side delete failed - mark as pending deletion for retry
+                    // Re-insert with a pending-delete flag so sync can retry later
+                    return@withContext Result.failure(
+                        ApiException(response.code(), "Server delete failed: ${response.message()}")
+                    )
+                }
             } catch (e: Exception) {
-                // Ignore network errors - already deleted locally
+                // Network error - propagate so caller can handle retry
+                return@withContext Result.failure(e)
             }
 
             Result.success(Unit)

@@ -24,7 +24,7 @@ APP_IDENTIFIER = "com.pecunia.desktop"
 # API CONFIGURATION
 # =============================================================================
 
-DEFAULT_API_BASE_URL = "http://localhost:8000/api/v1"
+DEFAULT_API_BASE_URL = "https://localhost:8000/api/v1"
 PRODUCTION_API_BASE_URL = "https://api.pecunia.com/v1"
 API_TIMEOUT_SECONDS = 30
 API_MAX_RETRIES = 3

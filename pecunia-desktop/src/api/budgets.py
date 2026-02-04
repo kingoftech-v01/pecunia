@@ -7,6 +7,7 @@ progress tracking, budget items management, and reporting.
 
 import logging
 from datetime import date
+from decimal import Decimal
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
 from enum import Enum
@@ -49,7 +50,7 @@ class Budget:
     """Represents a budget."""
     id: str
     name: str
-    amount: float
+    amount: Decimal
     period: str
     category: Optional[str] = None
     start_date: Optional[str] = None
@@ -67,7 +68,7 @@ class Budget:
         return cls(
             id=data.get('id', ''),
             name=data.get('name', ''),
-            amount=float(data.get('amount', 0)),
+            amount=Decimal(str(data.get('amount', 0))),
             period=data.get('period', BudgetPeriod.MONTHLY.value),
             category=data.get('category'),
             start_date=data.get('start_date'),
@@ -102,7 +103,7 @@ class BudgetItem:
     id: str
     budget_id: str
     name: str
-    amount: float
+    amount: Decimal
     category: Optional[str] = None
     item_type: str = BudgetItemType.CATEGORY.value
     description: Optional[str] = None
@@ -117,7 +118,7 @@ class BudgetItem:
             id=data.get('id', ''),
             budget_id=data.get('budget_id', ''),
             name=data.get('name', ''),
-            amount=float(data.get('amount', 0)),
+            amount=Decimal(str(data.get('amount', 0))),
             category=data.get('category'),
             item_type=data.get('item_type', BudgetItemType.CATEGORY.value),
             description=data.get('description'),
@@ -145,7 +146,7 @@ class BudgetWithItems:
     budget: Budget
     items: List[BudgetItem] = field(default_factory=list)
     total_allocated: float = 0.0
-    unallocated_amount: float = 0.0
+    unallocated_amount: Decimal = 0.0
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'BudgetWithItems':
@@ -167,9 +168,9 @@ class BudgetProgress:
     """Progress tracking for a budget."""
     budget_id: str
     budget_name: str
-    budget_amount: float
-    spent_amount: float
-    remaining_amount: float
+    budget_amount: Decimal
+    spent_amount: Decimal
+    remaining_amount: Decimal
     percent_used: float
     status: str
     period_start: str
@@ -308,9 +309,9 @@ class BudgetItemProgress:
     """Progress tracking for a budget item."""
     item_id: str
     item_name: str
-    budgeted_amount: float
-    spent_amount: float
-    remaining_amount: float
+    budgeted_amount: Decimal
+    spent_amount: Decimal
+    remaining_amount: Decimal
     percent_used: float
     category: Optional[str] = None
     transaction_count: int = 0
@@ -1007,7 +1008,7 @@ class BudgetsAPI:
 
     async def check_budget_impact(
         self,
-        amount: float,
+        amount: Decimal,
         category: str,
     ) -> Dict[str, Any]:
         """

@@ -98,9 +98,10 @@ CORS_URLS_REGEX = r'^/api/.*$'
 # CSP Directives
 CSP_DEFAULT_SRC = ("'self'",)
 
+_csp_script_dev = ("'unsafe-inline'",) if IS_DEVELOPMENT else ()
 CSP_SCRIPT_SRC = (
     "'self'",
-    "'unsafe-inline'" if IS_DEVELOPMENT else "",  # Only for dev
+    *_csp_script_dev,
     "https://js.stripe.com",
     "https://cdn.jsdelivr.net",
 )
@@ -288,7 +289,7 @@ SIMPLE_JWT = {
 
     # Signing algorithm
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': os.environ.get('JWT_SIGNING_KEY', os.environ.get('SECRET_KEY', '')),
+    'SIGNING_KEY': os.environ.get('JWT_SIGNING_KEY') or os.environ.get('SECRET_KEY') or os.environ.get('DJANGO_SECRET_KEY', ''),
     'VERIFYING_KEY': None,
 
     # Token validation
@@ -324,6 +325,9 @@ SIMPLE_JWT = {
 if IS_PRODUCTION:
     SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'] = timedelta(minutes=30)
     SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'] = timedelta(days=1)
+    # Validate JWT signing key is set in production
+    if not SIMPLE_JWT['SIGNING_KEY']:
+        raise ValueError("JWT_SIGNING_KEY or SECRET_KEY must be set in production")
 
 
 # =============================================================================

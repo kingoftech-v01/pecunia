@@ -1,9 +1,9 @@
 package com.pecunia.data.local.database
 
 import android.content.Context
-import android.util.Log
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.pecunia.BuildConfig
 import com.pecunia.data.local.dao.CategoryDao
 import com.pecunia.data.local.entity.CategoryEntity
 import com.pecunia.domain.model.CategoryType
@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.util.Date
 import java.util.UUID
 
@@ -42,7 +43,7 @@ class DatabaseCallback(
      */
     override fun onCreate(db: SupportSQLiteDatabase) {
         super.onCreate(db)
-        Log.d(TAG, "Database created for the first time")
+        Timber.d("Database created for the first time")
 
         // Prepopulate default categories using raw SQL
         // This is more reliable than using DAOs during callback
@@ -57,7 +58,7 @@ class DatabaseCallback(
      */
     override fun onOpen(db: SupportSQLiteDatabase) {
         super.onOpen(db)
-        Log.d(TAG, "Database opened")
+        Timber.d("Database opened")
 
         // Perform any necessary validation or cleanup
         performDatabaseHealthCheck(db)
@@ -71,7 +72,7 @@ class DatabaseCallback(
      */
     override fun onDestructiveMigration(db: SupportSQLiteDatabase) {
         super.onDestructiveMigration(db)
-        Log.w(TAG, "Destructive migration performed - all data was lost")
+        Timber.w("Destructive migration performed - all data was lost")
 
         // Re-prepopulate default categories after destructive migration
         prepopulateDefaultCategories(db)
@@ -82,7 +83,7 @@ class DatabaseCallback(
      * Uses raw SQL for reliability during the callback phase.
      */
     private fun prepopulateDefaultCategories(db: SupportSQLiteDatabase) {
-        Log.d(TAG, "Prepopulating default categories")
+        Timber.d("Prepopulating default categories")
 
         val currentTime = System.currentTimeMillis()
 
@@ -243,31 +244,29 @@ class DatabaseCallback(
                 INSERT INTO categories (
                     id, uuid, name, icon, color, type, description,
                     is_default, is_active, sort_order, created_at, updated_at
-                ) VALUES (
-                    ${index + 1},
-                    '$uuid',
-                    '${category.name}',
-                    '${category.icon}',
-                    '${category.color}',
-                    '${category.type.name}',
-                    '${category.description}',
-                    1,
-                    1,
-                    ${index + 1},
-                    $currentTime,
-                    $currentTime
-                )
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?)
             """.trimIndent()
 
             try {
-                db.execSQL(sql)
-                Log.d(TAG, "Inserted category: ${category.name}")
+                db.execSQL(sql, arrayOf(
+                    index + 1,
+                    uuid,
+                    category.name,
+                    category.icon,
+                    category.color,
+                    category.type.name,
+                    category.description,
+                    index + 1,
+                    currentTime,
+                    currentTime
+                ))
+                Timber.d("Inserted category: %s", category.name)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to insert category: ${category.name}", e)
+                Timber.e(e, "Failed to insert category: %s", category.name)
             }
         }
 
-        Log.d(TAG, "Default categories prepopulated: ${allCategories.size} categories")
+        Timber.d("Default categories prepopulated: %d categories", allCategories.size)
     }
 
     /**
@@ -281,18 +280,20 @@ class DatabaseCallback(
             if (integrityCheck.moveToFirst()) {
                 val result = integrityCheck.getString(0)
                 if (result == "ok") {
-                    Log.d(TAG, "Database integrity check: OK")
+                    Timber.d("Database integrity check: OK")
                 } else {
-                    Log.e(TAG, "Database integrity check failed: $result")
+                    Timber.e("Database integrity check failed: %s", result)
                 }
             }
             integrityCheck.close()
 
-            // Log table statistics
-            logTableStatistics(db)
+            // Log table statistics only in debug builds
+            if (BuildConfig.DEBUG) {
+                logTableStatistics(db)
+            }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Database health check failed", e)
+            Timber.e(e, "Database health check failed")
         }
     }
 
@@ -315,12 +316,12 @@ class DatabaseCallback(
                 val cursor = db.query("SELECT COUNT(*) FROM $table")
                 if (cursor.moveToFirst()) {
                     val count = cursor.getLong(0)
-                    Log.d(TAG, "Table '$table' row count: $count")
+                    Timber.d("Table '%s' row count: %d", table, count)
                 }
                 cursor.close()
             } catch (e: Exception) {
                 // Table might not exist yet
-                Log.d(TAG, "Table '$table' not accessible: ${e.message}")
+                Timber.d("Table '%s' not accessible: %s", table, e.message)
             }
         }
     }
@@ -350,7 +351,7 @@ object DatabaseUtils {
      */
     suspend fun clearAllData(database: AppDatabase) {
         database.clearAllTables()
-        Log.d("DatabaseUtils", "All database tables cleared")
+        Timber.d("All database tables cleared")
     }
 
     /**
@@ -363,7 +364,7 @@ object DatabaseUtils {
      */
     fun exportDatabase(context: Context, database: AppDatabase): String? {
         // TODO: Implement database export functionality
-        Log.d("DatabaseUtils", "Database export not yet implemented")
+        Timber.d("Database export not yet implemented")
         return null
     }
 
@@ -377,7 +378,7 @@ object DatabaseUtils {
      */
     fun importDatabase(context: Context, backupPath: String): Boolean {
         // TODO: Implement database import functionality
-        Log.d("DatabaseUtils", "Database import not yet implemented")
+        Timber.d("Database import not yet implemented")
         return false
     }
 }

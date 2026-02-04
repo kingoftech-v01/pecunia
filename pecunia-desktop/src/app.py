@@ -873,7 +873,12 @@ class Application(QObject):
             )
 
             if reply == QMessageBox.StandardButton.Yes:
-                QDesktopServices.openUrl(QUrl(download_url))
+                from urllib.parse import urlparse
+                parsed = urlparse(download_url)
+                if parsed.scheme in ('https', 'http') and parsed.hostname:
+                    QDesktopServices.openUrl(QUrl(download_url))
+                else:
+                    logger.warning(f"Blocked opening URL with invalid scheme or host: {parsed.scheme}")
 
     @pyqtSlot(Exception)
     def _on_async_error(self, error: Exception) -> None:

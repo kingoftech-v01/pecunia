@@ -161,6 +161,11 @@ class ExportService:
                 'type', 'account', 'notes', 'tags'
             ]
 
+            # Validate output path
+            output_path = os.path.realpath(output_path)
+            if not os.path.isabs(output_path):
+                raise ExportError("Output path must be absolute")
+
             with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
 

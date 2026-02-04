@@ -12,9 +12,6 @@ from django.conf import settings
 from django.db.models import Sum, Count, Avg
 from django.http import StreamingHttpResponse
 from django.utils import timezone
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
-
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -203,7 +200,7 @@ class CategorizeView(APIView):
         except Exception as e:
             logger.exception("Error categorizing transaction")
             return Response(
-                {'error': str(e)},
+                {'error': 'An error occurred while categorizing the transaction.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -315,7 +312,6 @@ class BulkCategorizeView(APIView):
         })
 
 
-@method_decorator(csrf_exempt, name='dispatch')
 class ChatView(APIView):
     """
     API view for AI chat with streaming support.
@@ -327,6 +323,15 @@ class ChatView(APIView):
         serializer = ChatRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
+
+        # Validate that messages in history don't contain system role
+        messages = request.data.get('messages', [])
+        for msg in messages:
+            if isinstance(msg, dict) and msg.get('role') == 'system':
+                return Response(
+                    {'error': 'The system role is not allowed in chat messages.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
         # Check if streaming is requested
         accept_header = request.headers.get('Accept', '')
@@ -357,7 +362,7 @@ class ChatView(APIView):
         except Exception as e:
             logger.exception("Error generating chat response")
             return Response(
-                {'error': str(e)},
+                {'error': 'An error occurred while generating the response.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -388,7 +393,7 @@ class ChatView(APIView):
 
             except Exception as e:
                 logger.exception("Error in streaming response")
-                yield self._format_sse_event('error', {'message': str(e)})
+                yield self._format_sse_event('error', {'message': 'An error occurred while streaming the response.'})
 
         response = StreamingHttpResponse(
             event_stream(),
@@ -557,7 +562,7 @@ class InsightsView(APIView):
         except Exception as e:
             logger.exception("Error generating insights")
             return Response(
-                {'error': str(e)},
+                {'error': 'An error occurred while generating insights.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -595,17 +600,17 @@ class InsightsView(APIView):
         # Get transactions for the period
         transactions = Transaction.objects.filter(
             user=user,
-            date__gte=start_date,
-            date__lte=end_date
+            transaction_date__gte=start_date,
+            transaction_date__lte=end_date
         )
 
         # Calculate basic metrics
         income = transactions.filter(
-            transaction_type='income'
+            type='income'
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
 
         expenses = transactions.filter(
-            transaction_type='expense'
+            type='expense'
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
 
         net_savings = income - expenses
@@ -630,16 +635,16 @@ class InsightsView(APIView):
 
             prev_transactions = Transaction.objects.filter(
                 user=user,
-                date__gte=prev_start,
-                date__lte=prev_end
+                transaction_date__gte=prev_start,
+                transaction_date__lte=prev_end
             )
 
             prev_income = prev_transactions.filter(
-                transaction_type='income'
+                type='income'
             ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
 
             prev_expenses = prev_transactions.filter(
-                transaction_type='expense'
+                type='expense'
             ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
 
             insights['income_change'] = self._calculate_change(prev_income, income)
@@ -651,7 +656,7 @@ class InsightsView(APIView):
         # Category breakdown
         if 'category_breakdown' in insight_types:
             category_data = transactions.filter(
-                transaction_type='expense'
+                type='expense'
             ).values(
                 'category__name', 'category__icon'
             ).annotate(
@@ -673,14 +678,14 @@ class InsightsView(APIView):
         # Daily spending trend
         if 'trends' in insight_types:
             daily_data = transactions.filter(
-                transaction_type='expense'
-            ).values('date').annotate(
+                type='expense'
+            ).values('transaction_date').annotate(
                 total=Sum('amount')
-            ).order_by('date')
+            ).order_by('transaction_date')
 
             insights['daily_spending'] = [
                 {
-                    'date': item['date'].isoformat(),
+                    'date': item['transaction_date'].isoformat(),
                     'amount': float(item['total'])
                 }
                 for item in daily_data

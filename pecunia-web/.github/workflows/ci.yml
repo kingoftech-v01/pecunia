@@ -76,13 +76,13 @@ jobs:
 
       - name: Run Bandit (security linter)
         run: |
-          bandit -r apps/ config/ -x tests -f json -o bandit-report.json || true
+          bandit -r apps/ config/ -x tests -f json -o bandit-report.json
           bandit -r apps/ config/ -x tests -ll
 
       - name: Check for security vulnerabilities
         run: |
           pip install -r requirements.txt
-          safety check --full-report || true
+          safety check --full-report
 
       - name: Upload Bandit report
         uses: actions/upload-artifact@v4
@@ -350,7 +350,7 @@ jobs:
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: ghcr.io/${{ github.repository }}:${{ github.sha }}
           format: 'sarif'

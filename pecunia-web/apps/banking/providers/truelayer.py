@@ -10,6 +10,7 @@ from decimal import Decimal
 from typing import Optional, List
 from urllib.parse import urlencode
 from django.conf import settings
+from django.utils import timezone
 
 from .base import (
     BaseBankProvider,
@@ -43,10 +44,10 @@ class TrueLayerProvider(BaseBankProvider):
 
     def __init__(self):
         """Initialize TrueLayer provider."""
-        super().__init__()
         self.client_id = getattr(settings, 'TRUELAYER_CLIENT_ID', None)
         self.client_secret = getattr(settings, 'TRUELAYER_CLIENT_SECRET', None)
         self.use_sandbox = getattr(settings, 'TRUELAYER_SANDBOX', True)
+        super().__init__()
 
     def _validate_configuration(self):
         """Validate TrueLayer configuration."""
@@ -169,10 +170,10 @@ class TrueLayerProvider(BaseBankProvider):
 
         # TrueLayer access tokens typically expire in 1 hour
         expires_in = response.get('expires_in', 3600)
-        token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+        token_expires_at = timezone.now() + timedelta(seconds=expires_in)
 
         # Consent typically valid for 90 days
-        consent_expires_at = datetime.utcnow() + timedelta(days=90)
+        consent_expires_at = timezone.now() + timedelta(days=90)
 
         return AuthorizationResult(
             access_token=response['access_token'],
@@ -201,7 +202,7 @@ class TrueLayerProvider(BaseBankProvider):
         )
 
         expires_in = response.get('expires_in', 3600)
-        token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+        token_expires_at = timezone.now() + timedelta(seconds=expires_in)
 
         return AuthorizationResult(
             access_token=response['access_token'],

@@ -2,7 +2,9 @@ package com.pecunia.data.remote.dto
 
 import com.pecunia.data.local.database.entities.TransactionEntity
 import com.pecunia.data.local.database.entities.TransactionType
+import com.google.gson.annotations.JsonAdapter
 import com.google.gson.annotations.SerializedName
+import java.math.BigDecimal
 
 /**
  * Data Transfer Object for Transaction from API.
@@ -15,7 +17,7 @@ data class TransactionDto(
     val userId: String,
 
     @SerializedName("amount")
-    val amount: Double,
+    val amount: BigDecimal,
 
     @SerializedName("currency")
     val currency: String,
@@ -63,7 +65,7 @@ data class TransactionDto(
         return TransactionEntity(
             id = id,
             userId = userId,
-            amount = amount,
+            amount = amount.toDouble(),
             currency = currency,
             type = TransactionType.valueOf(type.uppercase()),
             category = category,
@@ -87,7 +89,7 @@ data class TransactionDto(
  */
 data class TransactionRequest(
     @SerializedName("amount")
-    val amount: Double,
+    val amount: BigDecimal,
 
     @SerializedName("currency")
     val currency: String = "USD",
@@ -128,7 +130,7 @@ data class TransactionRequest(
          */
         fun fromEntity(entity: TransactionEntity): TransactionRequest {
             return TransactionRequest(
-                amount = entity.amount,
+                amount = BigDecimal.valueOf(entity.amount),
                 currency = entity.currency,
                 type = entity.type.name,
                 category = entity.category,
@@ -181,13 +183,13 @@ data class TransactionResponse(
  */
 data class TransactionSummaryResponse(
     @SerializedName("total_income")
-    val totalIncome: Double,
+    val totalIncome: BigDecimal,
 
     @SerializedName("total_expense")
-    val totalExpense: Double,
+    val totalExpense: BigDecimal,
 
     @SerializedName("net_balance")
-    val netBalance: Double,
+    val netBalance: BigDecimal,
 
     @SerializedName("category_breakdown")
     val categoryBreakdown: List<CategoryBreakdown>,
@@ -207,10 +209,10 @@ data class CategoryBreakdown(
     val category: String,
 
     @SerializedName("amount")
-    val amount: Double,
+    val amount: BigDecimal,
 
     @SerializedName("percentage")
-    val percentage: Double,
+    val percentage: BigDecimal,
 
     @SerializedName("transaction_count")
     val transactionCount: Int

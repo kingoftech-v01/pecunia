@@ -223,7 +223,9 @@ class AsyncDatabaseConnection:
                 else:
                     self._backup_dir = self._get_default_backup_dir()
 
-                logger.info(f"Initializing async database at: {db_url}")
+                # Mask the database URL to avoid leaking path info in logs
+                masked_url = db_url.split("///")[0] + "///***" if "///" in db_url else db_url
+                logger.info(f"Initializing async database at: {masked_url}")
 
                 # Connection arguments for SQLite
                 connect_args = {"check_same_thread": False}
@@ -457,8 +459,13 @@ class AsyncDatabaseConnection:
                             sql_content = migration_file.read_text()
 
                             async with self._engine.begin() as conn:
-                                # Execute migration
-                                for statement in sql_content.split(';'):
+                                # Execute migration statements
+                                # Note: naive split on ';' may break if SQL
+                                # contains semicolons inside string literals.
+                                # For production use, consider a proper SQL parser.
+                                import re
+                                statements = re.split(r';(?=(?:[^\']*\'[^\']*\')*[^\']*$)', sql_content)
+                                for statement in statements:
                                     statement = statement.strip()
                                     if statement:
                                         await conn.execute(text(statement))
@@ -748,8 +755,14 @@ class AsyncDatabaseConnection:
                 stats["table_count"] = len(tables)
 
                 # Get row counts for each table
+                # Validate table names to prevent SQL injection
+                import re
+                valid_table_pattern = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
                 table_stats = {}
                 for table in tables:
+                    if not valid_table_pattern.match(table):
+                        logger.warning(f"Skipping invalid table name: {table}")
+                        continue
                     result = await conn.execute(text(f"SELECT COUNT(*) FROM {table}"))
                     table_stats[table] = {"row_count": result.scalar()}
                 stats["table_statistics"] = table_stats

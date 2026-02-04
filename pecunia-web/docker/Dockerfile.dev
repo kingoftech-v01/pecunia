@@ -19,6 +19,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Development tools
 RUN pip install ipython ipdb django-debug-toolbar
 
+# Create a non-root user for development
+RUN groupadd -r devuser && useradd -r -g devuser -d /app -s /bin/bash devuser \
+    && chown -R devuser:devuser /app
+USER devuser
+
 EXPOSE 8000
 
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

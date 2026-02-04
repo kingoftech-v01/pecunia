@@ -28,7 +28,7 @@ except ImportError:
     pd = None
 
 
-class ImportError(Exception):
+class DataImportError(Exception):
     """Exception raised for import-related errors."""
     pass
 
@@ -71,7 +71,7 @@ class ImportRecord:
         """Generate a unique hash for duplicate detection."""
         if self._hash is None:
             hash_str = f"{self.date.isoformat()}|{self.amount}|{self.description}"
-            self._hash = hashlib.md5(hash_str.encode()).hexdigest()
+            self._hash = hashlib.sha256(hash_str.encode()).hexdigest()
         return self._hash
 
     def to_dict(self) -> Dict[str, Any]:
@@ -232,7 +232,7 @@ class ImportService:
         file_path = Path(file_path)
 
         if not file_path.exists():
-            raise ImportError(f"File not found: {file_path}")
+            raise DataImportError(f"File not found: {file_path}")
 
         # Check by extension first
         extension = file_path.suffix.lower()
@@ -268,7 +268,7 @@ class ImportService:
         except Exception as e:
             logger.warning(f"Error detecting format: {e}")
 
-        raise ImportError(f"Unable to detect format for file: {file_path}")
+        raise DataImportError(f"Unable to detect format for file: {file_path}")
 
     # =========================================================================
     # CSV Import
@@ -325,7 +325,7 @@ class ImportService:
                 lines = lines[skip_rows:]
 
             if not lines:
-                raise ImportError("CSV file is empty")
+                raise DataImportError("CSV file is empty")
 
             # Parse with csv module
             reader = csv.DictReader(
@@ -351,7 +351,7 @@ class ImportService:
                     "Could not auto-detect date and amount columns. "
                     "Please provide column mapping."
                 )
-                raise ImportError("Missing required column mappings for date and amount")
+                raise DataImportError("Missing required column mappings for date and amount")
 
             self._report_progress(10, 100, "Processing records...")
 
@@ -392,7 +392,7 @@ class ImportService:
             raise
         except Exception as e:
             logger.error(f"CSV import failed: {e}")
-            raise ImportError(f"Failed to import CSV: {str(e)}") from e
+            raise DataImportError(f"Failed to import CSV: {str(e)}") from e
 
     def _detect_csv_delimiter(self, content: str) -> str:
         """Detect the CSV delimiter from content."""
@@ -527,7 +527,7 @@ class ImportService:
             raise
         except Exception as e:
             logger.error(f"OFX import failed: {e}")
-            raise ImportError(f"Failed to import OFX: {str(e)}") from e
+            raise DataImportError(f"Failed to import OFX: {str(e)}") from e
 
     def _parse_ofx_content(self, content: str) -> List[Dict[str, Any]]:
         """Parse OFX content and extract transactions."""
@@ -687,7 +687,7 @@ class ImportService:
             return result
 
         except Exception as e:
-            raise ImportError(f"Failed to import QIF: {str(e)}") from e
+            raise DataImportError(f"Failed to import QIF: {str(e)}") from e
 
     def _parse_qif_content(self, content: str) -> List[Dict[str, str]]:
         """Parse QIF content and extract transactions."""
@@ -968,7 +968,7 @@ class ImportService:
         elif detected_format == self.FORMAT_QIF:
             result = temp_service.import_qif(file_path)
         else:
-            raise ImportError(f"Unsupported format: {detected_format}")
+            raise DataImportError(f"Unsupported format: {detected_format}")
 
         # Return preview
         return {

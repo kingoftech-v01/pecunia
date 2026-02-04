@@ -36,8 +36,8 @@ class BaseSubscriptionPermission(permissions.BasePermission):
         'business': 3,
     }
 
-    # Cache timeout for subscription checks (5 minutes)
-    CACHE_TIMEOUT = 300
+    # Cache timeout for subscription checks (30 seconds)
+    CACHE_TIMEOUT = 30
 
     def get_subscription_info(self, user) -> dict:
         """
@@ -87,6 +87,15 @@ class BaseSubscriptionPermission(permissions.BasePermission):
 
         cache.set(cache_key, info, self.CACHE_TIMEOUT)
         return info
+
+    @staticmethod
+    def invalidate_subscription_cache(user_id):
+        """Invalidate cached subscription info when subscription changes.
+
+        Call this from subscription update/cancel/renew signal handlers
+        or views to ensure permission checks reflect the latest state.
+        """
+        cache.delete(f"subscription_perm:{user_id}")
 
     def _extract_features(self, plan) -> dict:
         """Extract feature flags from subscription plan."""

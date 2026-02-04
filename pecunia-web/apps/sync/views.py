@@ -48,6 +48,8 @@ Related Documentation:
 - See SCALABILITY_GUIDELINES.md for batch processing limits
 - See SECURITY_GUIDELINES.md for rate limiting configuration
 """
+import logging
+
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -57,6 +59,8 @@ from django.utils.dateparse import parse_datetime
 
 from .models import SyncLog, SyncQueue, SyncConflict
 from .manager import get_sync_manager
+
+logger = logging.getLogger(__name__)
 
 
 class SyncPushView(APIView):
@@ -128,11 +132,12 @@ class SyncPushView(APIView):
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
+            logger.exception(f"Sync push failed for sync {sync_log.id}")
             manager.complete_sync(sync_log, success=False, error=str(e))
             return Response({
                 'sync_id': str(sync_log.id),
                 'status': 'error',
-                'error': str(e),
+                'error': 'An error occurred while processing sync push.',
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -186,11 +191,12 @@ class SyncPullView(APIView):
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
+            logger.exception(f"Sync pull failed for sync {sync_log.id}")
             manager.complete_sync(sync_log, success=False, error=str(e))
             return Response({
                 'sync_id': str(sync_log.id),
                 'status': 'error',
-                'error': str(e),
+                'error': 'An error occurred while processing sync pull.',
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -328,11 +334,12 @@ class SyncBidirectionalView(APIView):
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
+            logger.exception(f"Bidirectional sync failed for sync {sync_log.id}")
             manager.complete_sync(sync_log, success=False, error=str(e))
             return Response({
                 'sync_id': str(sync_log.id),
                 'status': 'error',
-                'error': str(e),
+                'error': 'An error occurred while processing sync.',
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -441,9 +448,10 @@ class SyncConflictResolveView(APIView):
                 'error': 'Conflict not found',
             }, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
+            logger.exception(f"Failed to resolve conflict {conflict_id}")
             return Response({
                 'status': 'error',
-                'error': str(e),
+                'error': 'An error occurred while resolving the conflict.',
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -457,7 +465,13 @@ class SyncLogListView(APIView):
 
     def get(self, request):
         """Get recent sync logs."""
-        limit = int(request.query_params.get('limit', 10))
+        try:
+            limit = int(request.query_params.get('limit', 10))
+            if limit < 1:
+                limit = 10
+            limit = min(limit, 100)  # Cap at 100
+        except (ValueError, TypeError):
+            limit = 10
         device_id = request.query_params.get('device_id')
 
         queryset = SyncLog.objects.filter(user=request.user)

@@ -5,6 +5,7 @@ DRF serializers for budget planning and tracking.
 """
 from rest_framework import serializers
 from decimal import Decimal
+from django.db import transaction
 from .models import Budget, BudgetItem
 
 
@@ -44,6 +45,15 @@ class BudgetItemSerializer(serializers.ModelSerializer):
             'notes', 'is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_budget(self, value):
+        """Ensure budget belongs to the requesting user."""
+        request = self.context.get('request')
+        if request and value and value.user != request.user:
+            raise serializers.ValidationError(
+                "You do not have permission to use this budget."
+            )
+        return value
 
 
 class BudgetItemCreateSerializer(serializers.ModelSerializer):
@@ -179,10 +189,12 @@ class BudgetWithItemsSerializer(serializers.ModelSerializer):
         """Create budget with nested items."""
         items_data = validated_data.pop('items', [])
         validated_data['user'] = self.context['request'].user
-        budget = Budget.objects.create(**validated_data)
 
-        for item_data in items_data:
-            BudgetItem.objects.create(budget=budget, **item_data)
+        with transaction.atomic():
+            budget = Budget.objects.create(**validated_data)
+
+            for item_data in items_data:
+                BudgetItem.objects.create(budget=budget, **item_data)
 
         return budget
 
@@ -190,17 +202,18 @@ class BudgetWithItemsSerializer(serializers.ModelSerializer):
         """Update budget and optionally its items."""
         items_data = validated_data.pop('items', None)
 
-        # Update budget fields
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+        with transaction.atomic():
+            # Update budget fields
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
 
-        # Update items if provided
-        if items_data is not None:
-            # Clear existing items and create new ones
-            instance.items.all().delete()
-            for item_data in items_data:
-                BudgetItem.objects.create(budget=instance, **item_data)
+            # Update items if provided
+            if items_data is not None:
+                # Clear existing items and create new ones
+                instance.items.all().delete()
+                for item_data in items_data:
+                    BudgetItem.objects.create(budget=instance, **item_data)
 
         return instance
 

@@ -7,9 +7,18 @@ Includes both frontend (HTML) and API routes.
 from django.contrib import admin
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from rest_framework.permissions import IsAdminUser
 
 from apps.dashboard.urls import api_urlpatterns as dashboard_api_urls
 from apps.dashboard.urls import landing_urlpatterns as landing_urls
+
+
+class AuthenticatedSchemaView(SpectacularAPIView):
+    permission_classes = [IsAdminUser]
+
+
+class AuthenticatedSwaggerView(SpectacularSwaggerView):
+    permission_classes = [IsAdminUser]
 
 # API v1 URL patterns
 api_v1_patterns = [
@@ -38,9 +47,9 @@ urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
 
-    # API Documentation
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    # API Documentation (requires admin authentication)
+    path('api/schema/', AuthenticatedSchemaView.as_view(), name='schema'),
+    path('api/docs/', AuthenticatedSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 
     # API v1
     path('api/v1/', include((api_v1_patterns, 'api'), namespace='api-v1')),

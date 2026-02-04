@@ -70,7 +70,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             DATABASE_NAME
         )
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigrationOnDowngrade()
             .setQueryExecutor(Executors.newFixedThreadPool(4))
             .setTransactionExecutor(Executors.newSingleThreadExecutor())
             .addCallback(object : RoomDatabase.Callback() {

@@ -36,7 +36,6 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     # Security middlewares (first)
     'apps.core.middleware.RequestSanitizationMiddleware',  # Input validation
-    'apps.core.middleware.RateLimitMiddleware',  # Rate limiting
     # CORS
     'corsheaders.middleware.CorsMiddleware',
     # Django security
@@ -48,6 +47,8 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     # Authentication
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # Rate limiting (after auth so user-tier limits work)
+    'apps.core.middleware.RateLimitMiddleware',  # Rate limiting
     # Custom middlewares (after authentication)
     'apps.core.middleware.SubscriptionCheckMiddleware',  # Subscription verification
     'apps.core.middleware.AuditLogMiddleware',  # Audit logging

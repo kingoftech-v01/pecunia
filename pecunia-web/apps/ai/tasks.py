@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 )
 def categorize_new_transactions(
     self,
-    user_id: Optional[int] = None,
+    user_id: int,
     batch_size: int = 50,
     min_confidence: float = 0.75,
     auto_apply: bool = False,
@@ -49,7 +49,7 @@ def categorize_new_transactions(
 
     Args:
         self: Task instance (bound task)
-        user_id: Optional user ID to categorize only their transactions
+        user_id: User ID whose transactions to categorize (required)
         batch_size: Number of transactions to process per batch
         min_confidence: Minimum confidence for auto-apply
         auto_apply: Whether to automatically apply high-confidence categories
@@ -60,6 +60,9 @@ def categorize_new_transactions(
     from django.contrib.auth import get_user_model
     from apps.transactions.models import Transaction, TransactionCategory
     from apps.ai.services.categorization import TransactionCategorizer
+
+    if not user_id:
+        raise ValueError("user_id is required to prevent cross-tenant data access")
 
     logger.info(
         f"Starting transaction categorization - user_id={user_id}, "
@@ -78,16 +81,11 @@ def categorize_new_transactions(
     try:
         User = get_user_model()
 
-        # Build query for uncategorized transactions
+        # Build query for uncategorized transactions scoped to user
         transactions_qs = Transaction.objects.filter(
-            category__isnull=True
+            category__isnull=True,
+            user_id=user_id,
         ).select_related('user')
-
-        if user_id:
-            transactions_qs = transactions_qs.filter(user_id=user_id)
-        else:
-            # Only process active users
-            transactions_qs = transactions_qs.filter(user__is_active=True)
 
         # Order by most recent first
         transactions_qs = transactions_qs.order_by('-transaction_date')
@@ -276,19 +274,19 @@ def categorize_user_transactions(
 )
 def check_anomalies_daily(
     self,
-    user_id: Optional[int] = None,
+    user_id: int,
     lookback_days: int = 7,
     save_alerts: bool = True,
 ) -> Dict[str, Any]:
     """
-    Daily anomaly detection check for all users.
+    Daily anomaly detection check for a specific user.
 
     Analyzes recent transactions for unusual patterns and
     generates alerts for detected anomalies.
 
     Args:
         self: Task instance (bound task)
-        user_id: Optional specific user ID
+        user_id: User ID to check (required)
         lookback_days: Number of days to analyze
         save_alerts: Whether to save alerts to database
 
@@ -298,6 +296,9 @@ def check_anomalies_daily(
     from django.contrib.auth import get_user_model
     from apps.transactions.models import Transaction
     from apps.ai.services.anomaly_detection import AnomalyDetector
+
+    if not user_id:
+        raise ValueError("user_id is required to prevent cross-tenant data access")
 
     logger.info(
         f"Starting daily anomaly check - user_id={user_id}, lookback_days={lookback_days}",
@@ -315,20 +316,8 @@ def check_anomalies_daily(
     try:
         User = get_user_model()
 
-        # Get users to check
-        if user_id:
-            users = User.objects.filter(id=user_id, is_active=True)
-        else:
-            # Get users with recent transactions
-            cutoff_date = timezone.now().date() - timedelta(days=lookback_days)
-            user_ids_with_transactions = Transaction.objects.filter(
-                transaction_date__gte=cutoff_date
-            ).values_list('user_id', flat=True).distinct()
-
-            users = User.objects.filter(
-                id__in=user_ids_with_transactions,
-                is_active=True
-            )
+        # Get user to check - scoped to single user
+        users = User.objects.filter(id=user_id, is_active=True)
 
         detector = AnomalyDetector()
 
@@ -473,20 +462,23 @@ def check_single_transaction_anomaly(
 )
 def detect_subscription_changes(
     self,
-    user_id: Optional[int] = None,
+    user_id: int,
 ) -> Dict[str, Any]:
     """
     Detect changes in recurring subscriptions.
 
     Args:
         self: Task instance (bound task)
-        user_id: Optional specific user ID
+        user_id: User ID to check (required)
 
     Returns:
         Dict with subscription change analysis
     """
     from django.contrib.auth import get_user_model
     from apps.ai.services.anomaly_detection import AnomalyDetector
+
+    if not user_id:
+        raise ValueError("user_id is required to prevent cross-tenant data access")
 
     logger.info(
         f"Detecting subscription changes - user_id={user_id}",
@@ -503,10 +495,7 @@ def detect_subscription_changes(
     try:
         User = get_user_model()
 
-        if user_id:
-            users = User.objects.filter(id=user_id, is_active=True)
-        else:
-            users = User.objects.filter(is_active=True)
+        users = User.objects.filter(id=user_id, is_active=True)
 
         detector = AnomalyDetector()
 
@@ -557,18 +546,18 @@ def detect_subscription_changes(
 )
 def generate_weekly_recommendations(
     self,
-    user_id: Optional[int] = None,
+    user_id: int,
     num_recommendations: int = 5,
 ) -> Dict[str, Any]:
     """
-    Generate weekly recommendations for all users.
+    Generate weekly recommendations for a specific user.
 
     This task runs weekly to provide fresh budget and saving
     recommendations based on recent spending patterns.
 
     Args:
         self: Task instance (bound task)
-        user_id: Optional specific user ID
+        user_id: User ID to generate recommendations for (required)
         num_recommendations: Number of recommendations per user
 
     Returns:
@@ -577,6 +566,9 @@ def generate_weekly_recommendations(
     from django.contrib.auth import get_user_model
     from apps.transactions.models import Transaction
     from apps.ai.services.recommendations import RecommendationEngine
+
+    if not user_id:
+        raise ValueError("user_id is required to prevent cross-tenant data access")
 
     logger.info(
         f"Starting weekly recommendation generation - user_id={user_id}",
@@ -593,20 +585,8 @@ def generate_weekly_recommendations(
     try:
         User = get_user_model()
 
-        # Get users to generate recommendations for
-        if user_id:
-            users = User.objects.filter(id=user_id, is_active=True)
-        else:
-            # Get users with recent activity
-            thirty_days_ago = timezone.now().date() - timedelta(days=30)
-            active_user_ids = Transaction.objects.filter(
-                transaction_date__gte=thirty_days_ago
-            ).values_list('user_id', flat=True).distinct()
-
-            users = User.objects.filter(
-                id__in=active_user_ids,
-                is_active=True
-            )
+        # Get specific user to generate recommendations for
+        users = User.objects.filter(id=user_id, is_active=True)
 
         engine = RecommendationEngine()
 
@@ -743,19 +723,19 @@ def generate_user_recommendations(
 )
 def generate_monthly_insights(
     self,
-    user_id: Optional[int] = None,
+    user_id: int,
     month: Optional[int] = None,
     year: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
-    Generate monthly insights for users.
+    Generate monthly insights for a specific user.
 
     Typically run at the beginning of each month to analyze
     the previous month's spending.
 
     Args:
         self: Task instance (bound task)
-        user_id: Optional specific user ID
+        user_id: User ID to generate insights for (required)
         month: Month to analyze (defaults to previous month)
         year: Year to analyze
 
@@ -764,6 +744,9 @@ def generate_monthly_insights(
     """
     from django.contrib.auth import get_user_model
     from apps.ai.services.recommendations import RecommendationEngine
+
+    if not user_id:
+        raise ValueError("user_id is required to prevent cross-tenant data access")
 
     # Default to previous month
     today = timezone.now().date()
@@ -789,10 +772,7 @@ def generate_monthly_insights(
     try:
         User = get_user_model()
 
-        if user_id:
-            users = User.objects.filter(id=user_id, is_active=True)
-        else:
-            users = User.objects.filter(is_active=True)
+        users = User.objects.filter(id=user_id, is_active=True)
 
         engine = RecommendationEngine()
 

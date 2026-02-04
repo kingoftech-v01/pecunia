@@ -5,6 +5,7 @@ Handles account linking, profile synchronization, and social auth customization.
 
 import logging
 from typing import Optional, Dict, Any
+from urllib.parse import urlparse
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -124,19 +125,35 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
             try:
                 existing_user = User.objects.get(email__iexact=email)
 
-                # Check if email is verified by the provider
-                email_verified = sociallogin.account.extra_data.get('email_verified', False)
+                # Verify email on BOTH sides before auto-linking:
+                # 1. The provider must assert the email is verified
+                email_verified_by_provider = sociallogin.account.extra_data.get(
+                    'email_verified', False
+                )
+                # Normalise: some providers return string 'true'
+                if isinstance(email_verified_by_provider, str):
+                    email_verified_by_provider = email_verified_by_provider.lower() == 'true'
 
-                if email_verified:
-                    # Auto-link the account
+                # 2. The existing user must have a verified email on our platform
+                from allauth.account.models import EmailAddress
+                email_verified_locally = EmailAddress.objects.filter(
+                    user=existing_user,
+                    email__iexact=email,
+                    verified=True,
+                ).exists()
+
+                if email_verified_by_provider and email_verified_locally:
+                    # Both sides verified -- safe to auto-link
                     sociallogin.connect(request, existing_user)
                     logger.info(
                         f"Auto-linked {sociallogin.account.provider} account to user {existing_user.id}"
                     )
                 else:
-                    # Email not verified, require manual linking
+                    # Require manual linking when verification is incomplete
                     logger.warning(
-                        f"Cannot auto-link unverified email {email} from {sociallogin.account.provider}"
+                        f"Cannot auto-link email {email} from {sociallogin.account.provider}: "
+                        f"provider_verified={email_verified_by_provider}, "
+                        f"local_verified={email_verified_locally}"
                     )
 
             except User.DoesNotExist:
@@ -267,16 +284,104 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
             user.save()
             logger.info(f"Synced profile for user {user.id} from {provider}")
 
+    # Allowed domains for profile picture downloads (SSRF protection)
+    ALLOWED_AVATAR_DOMAINS = frozenset(
+        getattr(settings, 'SOCIALACCOUNT_AVATAR_ALLOWED_DOMAINS', [
+            'lh3.googleusercontent.com',
+            'lh4.googleusercontent.com',
+            'lh5.googleusercontent.com',
+            'lh6.googleusercontent.com',
+            '*.googleusercontent.com',
+            'platform-lookaside.fbsbx.com',
+            'graph.facebook.com',
+            'pbs.twimg.com',
+            'avatars.githubusercontent.com',
+            'appleid.cdn-apple.com',
+        ])
+    )
+
+    # Maximum profile picture size in bytes (2 MB)
+    MAX_AVATAR_SIZE = 2 * 1024 * 1024
+
+    def _is_allowed_avatar_url(self, url: str) -> bool:
+        """Validate that a URL is safe for fetching an avatar.
+
+        Only HTTPS URLs on explicitly allowed domains are permitted.
+        """
+        try:
+            parsed = urlparse(url)
+        except ValueError:
+            return False
+
+        if parsed.scheme != 'https':
+            return False
+
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+
+        for domain in self.ALLOWED_AVATAR_DOMAINS:
+            if domain.startswith('*.'):
+                # Wildcard match: *.example.com matches sub.example.com
+                if hostname.endswith(domain[1:]):  # domain[1:] == '.example.com'
+                    return True
+            elif hostname == domain:
+                return True
+
+        return False
+
     def _update_profile_picture(self, user, picture_url: str, provider: str):
         """
         Download and save profile picture from social provider.
+
+        Security measures:
+        - Only HTTPS URLs on allowed domains (SSRF protection)
+        - Streaming download with size limit (DoS protection)
         """
         if not hasattr(user, 'avatar'):
             return
 
+        # Validate URL before making any request
+        if not self._is_allowed_avatar_url(picture_url):
+            logger.warning(
+                f"Blocked avatar download from disallowed URL: {picture_url}"
+            )
+            return
+
         try:
-            response = requests.get(picture_url, timeout=10)
+            response = requests.get(
+                picture_url,
+                timeout=10,
+                stream=True,
+                allow_redirects=False,
+            )
             response.raise_for_status()
+
+            # Check Content-Length header first (if present)
+            content_length = response.headers.get('content-length')
+            if content_length and int(content_length) > self.MAX_AVATAR_SIZE:
+                logger.warning(
+                    f"Avatar from {provider} exceeds size limit: "
+                    f"{content_length} bytes"
+                )
+                response.close()
+                return
+
+            # Stream download with size enforcement
+            chunks = []
+            downloaded = 0
+            for chunk in response.iter_content(chunk_size=8192):
+                downloaded += len(chunk)
+                if downloaded > self.MAX_AVATAR_SIZE:
+                    logger.warning(
+                        f"Avatar download from {provider} exceeded "
+                        f"{self.MAX_AVATAR_SIZE} byte limit, aborting"
+                    )
+                    response.close()
+                    return
+                chunks.append(chunk)
+
+            content = b''.join(chunks)
 
             # Determine file extension
             content_type = response.headers.get('content-type', '')
@@ -288,7 +393,7 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
                 ext = 'jpg'  # Default
 
             filename = f"avatar_{provider}_{user.id}.{ext}"
-            user.avatar.save(filename, ContentFile(response.content), save=True)
+            user.avatar.save(filename, ContentFile(content), save=True)
 
             logger.debug(f"Updated avatar for user {user.id} from {provider}")
 

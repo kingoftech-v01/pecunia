@@ -1024,8 +1024,11 @@ def _cleanup_old_audit_logs(cutoff_date, dry_run: bool) -> int:
     count = old_logs.count()
 
     if not dry_run and count > 0:
-        # Delete in batches
-        old_logs._raw_delete(old_logs.db)
+        # Delete in batches using regular delete to respect signals and cascades
+        batch_size = 1000
+        while old_logs.exists():
+            batch_ids = list(old_logs.values_list('id', flat=True)[:batch_size])
+            AuditLog.objects.filter(id__in=batch_ids).delete()
         logger.info(f"Deleted {count} old audit logs")
 
     return count
@@ -1085,8 +1088,21 @@ def _cleanup_temp_files(dry_run: bool) -> int:
 
 
 def _optimize_database() -> None:
-    """Run database optimization commands."""
+    """Run database optimization commands.
+
+    Only runs VACUUM ANALYZE outside of business hours (8 AM - 8 PM)
+    to avoid blocking production queries during peak usage.
+    """
     from django.db import connection
+
+    current_hour = timezone.now().hour
+    if 8 <= current_hour < 20:
+        logger.info(
+            "Database VACUUM ANALYZE skipped - current hour %d is within "
+            "business hours (8-20). Schedule this task outside business hours.",
+            current_hour
+        )
+        return
 
     try:
         if 'postgresql' in connection.vendor:

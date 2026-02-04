@@ -3,13 +3,16 @@ Banking API Views.
 
 DRF ViewSets and APIViews for bank connections and accounts.
 """
+import logging
 import secrets
+from datetime import timedelta
 from decimal import Decimal
 from django.db.models import Sum
 from django.utils import timezone
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
 from .models import BankConnection, BankAccount, SyncLog
@@ -30,6 +33,16 @@ from .serializers import (
 from .providers import get_provider, get_available_providers
 from .providers.base import ProviderError, TokenExpiredError
 
+logger = logging.getLogger(__name__)
+
+
+class OAuthRateThrottle(UserRateThrottle):
+    rate = '10/minute'
+
+
+class SyncRateThrottle(UserRateThrottle):
+    rate = '5/minute'
+
 
 class BankConnectionViewSet(viewsets.ModelViewSet):
     """
@@ -44,6 +57,7 @@ class BankConnectionViewSet(viewsets.ModelViewSet):
     - GET /api/v1/banking/connections/{id}/status/ - Check status
     """
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [OAuthRateThrottle]
 
     def get_serializer_class(self):
         """Return appropriate serializer based on action."""
@@ -92,7 +106,6 @@ class BankConnectionViewSet(viewsets.ModelViewSet):
 
             return Response({
                 'authorization_url': auth_url,
-                'state': state,
                 'provider': provider_name,
             })
 
@@ -130,6 +143,17 @@ class BankConnectionViewSet(viewsets.ModelViewSet):
     def sync(self, request, pk=None):
         """Trigger a manual sync for a connection."""
         connection = self.get_object()
+
+        # Prevent concurrent syncs on the same connection
+        if SyncLog.objects.filter(
+            connection=connection,
+            status='started',
+            started_at__gte=timezone.now() - timedelta(minutes=5),
+        ).exists():
+            return Response(
+                {'error': 'A sync is already in progress for this connection'},
+                status=status.HTTP_409_CONFLICT,
+            )
 
         serializer = SyncRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -260,6 +284,7 @@ class BankConnectionCallbackView(APIView):
     POST /api/v1/banking/callback/
     """
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [OAuthRateThrottle]
 
     def post(self, request):
         """Process OAuth callback and complete connection."""
@@ -276,6 +301,14 @@ class BankConnectionCallbackView(APIView):
         if not stored_state or stored_state != state:
             return Response(
                 {'error': 'Invalid state parameter'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Verify redirect_uri matches the one used during authorization
+        stored_redirect = request.session.get(f'bank_oauth_redirect_{provider_name}')
+        if not stored_redirect or stored_redirect != redirect_uri:
+            return Response(
+                {'error': 'Invalid redirect_uri parameter'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -420,6 +453,9 @@ class BankAccountViewSet(viewsets.ModelViewSet):
             if connection.is_token_expired and connection.refresh_token:
                 result = provider.refresh_access_token(connection.refresh_token)
                 connection.access_token = result.access_token
+                if result.refresh_token:
+                    connection.refresh_token = result.refresh_token
+                connection.token_expires_at = result.token_expires_at
                 connection.save()
 
             # Get balance
@@ -507,13 +543,16 @@ class SyncAllView(APIView):
     POST /api/v1/banking/sync-all/
     """
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [SyncRateThrottle]
+
+    MAX_CONNECTIONS_PER_SYNC = 10
 
     def post(self, request):
         """Sync all active connections."""
         connections = BankConnection.objects.filter(
             user=request.user,
             status='active'
-        )
+        )[:self.MAX_CONNECTIONS_PER_SYNC]
 
         results = []
         for connection in connections:
@@ -543,12 +582,23 @@ class SyncAllView(APIView):
                     'status': 'success',
                 })
 
-            except Exception as e:
+            except ProviderError as e:
                 connection.mark_sync_error(str(e))
                 results.append({
                     'connection_id': str(connection.id),
                     'status': 'error',
                     'error': str(e),
+                })
+
+            except Exception:
+                logger.exception(
+                    "Unexpected error syncing connection %s", connection.id
+                )
+                connection.mark_sync_error('Internal sync error')
+                results.append({
+                    'connection_id': str(connection.id),
+                    'status': 'error',
+                    'error': 'An unexpected error occurred during sync',
                 })
 
         return Response({

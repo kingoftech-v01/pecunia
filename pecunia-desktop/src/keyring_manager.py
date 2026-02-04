@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-from config import get_config_dir, get_credentials_path
+from config import get_config_dir
 
 # Optional imports with fallbacks
 try:
@@ -298,7 +298,7 @@ class EncryptedFileBackend(CredentialBackend):
     """
 
     def __init__(self, file_path: Optional[Path] = None):
-        self._file_path = file_path or get_credentials_path()
+        self._file_path = file_path or (get_config_dir() / 'credentials.enc')
         self._data: Dict[str, str] = {}
         self._loaded = False
         self._lock = threading.RLock()
@@ -468,11 +468,19 @@ class _SimpleCipher:
     Simple cipher for when cryptography library is not available.
 
     WARNING: This is NOT cryptographically secure. It only provides
-    basic obfuscation to prevent casual inspection.
+    basic obfuscation to prevent casual inspection. The XOR key is
+    derived from machine-specific identifiers, which are predictable.
+    Install the 'cryptography' package for proper AES-256 encryption:
+        pip install cryptography
     """
 
     def __init__(self, key: bytes):
         self._key = key
+        logger.warning(
+            "Using XOR-based obfuscation for credential storage. "
+            "This is NOT secure. Install 'cryptography' package for "
+            "proper AES-256 encryption: pip install cryptography"
+        )
 
     def encrypt(self, data: bytes) -> bytes:
         """XOR-based obfuscation (NOT secure encryption)."""

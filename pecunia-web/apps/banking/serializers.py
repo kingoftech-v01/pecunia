@@ -3,6 +3,8 @@ Banking Serializers.
 
 DRF serializers for bank connections and accounts.
 """
+from urllib.parse import urlparse
+from django.conf import settings
 from rest_framework import serializers
 from .models import BankConnection, BankAccount, SyncLog
 
@@ -78,6 +80,17 @@ class BankConnectionCreateSerializer(serializers.Serializer):
             )
         return value
 
+    def validate_redirect_uri(self, value):
+        """Validate redirect_uri against allowed domains."""
+        allowed_domains = getattr(settings, 'ALLOWED_REDIRECT_DOMAINS', [])
+        if allowed_domains:
+            parsed = urlparse(value)
+            if parsed.hostname not in allowed_domains:
+                raise serializers.ValidationError(
+                    "redirect_uri domain is not allowed."
+                )
+        return value
+
 
 class BankConnectionCallbackSerializer(serializers.Serializer):
     """
@@ -92,6 +105,17 @@ class BankConnectionCallbackSerializer(serializers.Serializer):
         choices=BankConnection.PROVIDER_CHOICES,
         required=True
     )
+
+    def validate_redirect_uri(self, value):
+        """Validate redirect_uri against allowed domains."""
+        allowed_domains = getattr(settings, 'ALLOWED_REDIRECT_DOMAINS', [])
+        if allowed_domains:
+            parsed = urlparse(value)
+            if parsed.hostname not in allowed_domains:
+                raise serializers.ValidationError(
+                    "redirect_uri domain is not allowed."
+                )
+        return value
 
 
 class BankAccountSerializer(serializers.ModelSerializer):

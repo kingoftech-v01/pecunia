@@ -11,7 +11,6 @@ import re
 import time
 import uuid
 from datetime import datetime, timedelta
-from functools import lru_cache
 from typing import Callable, Optional, Dict, Any
 
 from django.conf import settings
@@ -140,12 +139,20 @@ class RateLimitMiddleware(MiddlewareMixin):
         return f"ratelimit:ip:{self._hash_ip(self._get_client_ip(request))}"
 
     def _get_client_ip(self, request: HttpRequest) -> str:
-        """Extract client IP address from request."""
-        # Check for proxy headers (Cloudflare, nginx, etc.)
+        """Extract client IP address from request.
+
+        Uses TRUSTED_PROXY_COUNT from settings to select the correct
+        IP from X-Forwarded-For, counting from the right.  This prevents
+        spoofing via forged leftmost entries.
+        """
         forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if forwarded_for:
-            # Take the first IP in the chain (client IP)
-            return forwarded_for.split(',')[0].strip()
+            ips = [ip.strip() for ip in forwarded_for.split(',')]
+            trusted_proxy_count = getattr(settings, 'TRUSTED_PROXY_COUNT', 1)
+            # The rightmost `trusted_proxy_count` IPs are from trusted proxies.
+            # The entry just before them is the real client IP.
+            index = max(len(ips) - trusted_proxy_count, 0)
+            return ips[index]
 
         real_ip = request.META.get('HTTP_X_REAL_IP')
         if real_ip:
@@ -444,10 +451,17 @@ class AuditLogMiddleware(MiddlewareMixin):
             )
 
     def _get_client_ip(self, request: HttpRequest) -> str:
-        """Extract client IP address."""
+        """Extract client IP address.
+
+        Uses TRUSTED_PROXY_COUNT from settings to select the correct
+        IP from X-Forwarded-For, counting from the right.
+        """
         forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if forwarded_for:
-            return forwarded_for.split(',')[0].strip()
+            ips = [ip.strip() for ip in forwarded_for.split(',')]
+            trusted_proxy_count = getattr(settings, 'TRUSTED_PROXY_COUNT', 1)
+            index = max(len(ips) - trusted_proxy_count, 0)
+            return ips[index]
         return request.META.get('REMOTE_ADDR', '0.0.0.0')
 
     def _is_excluded_path(self, path: str) -> bool:
@@ -734,23 +748,33 @@ class SubscriptionCheckMiddleware(MiddlewareMixin):
 
         return None
 
-    @lru_cache(maxsize=128)
     def _get_current_bank_accounts(self, user) -> int:
-        """Get current bank account count for user (cached)."""
+        """Get current bank account count for user (short-lived cache)."""
+        cache_key = f"bank_account_count:{user.id}"
+        count = cache.get(cache_key)
+        if count is not None:
+            return count
         try:
             from apps.banking.models import BankAccount
-            return BankAccount.objects.filter(user=user).count()
+            count = BankAccount.objects.filter(user=user).count()
         except Exception:
-            return 0
+            count = 0
+        cache.set(cache_key, count, timeout=30)
+        return count
 
-    @lru_cache(maxsize=128)
     def _get_current_budgets(self, user) -> int:
-        """Get current budget count for user (cached)."""
+        """Get current budget count for user (short-lived cache)."""
+        cache_key = f"budget_count:{user.id}"
+        count = cache.get(cache_key)
+        if count is not None:
+            return count
         try:
             from apps.budgets.models import Budget
-            return Budget.objects.filter(user=user).count()
+            count = Budget.objects.filter(user=user).count()
         except Exception:
-            return 0
+            count = 0
+        cache.set(cache_key, count, timeout=30)
+        return count
 
     def _subscription_required_response(
         self,
@@ -909,12 +933,20 @@ class RequestSanitizationMiddleware(MiddlewareMixin):
     """
 
     # Suspicious patterns (SQL injection, XSS, etc.)
+    # These patterns are designed to avoid false positives on legitimate
+    # financial terms like "FROM account", "SELECT plan", etc.
     SUSPICIOUS_PATTERNS = [
-        # SQL Injection patterns
-        r"(\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|ALTER|CREATE|TRUNCATE)\b.*\b(FROM|INTO|TABLE|DATABASE)\b)",
+        # SQL Injection patterns - require SQL-like structure, not bare keywords
+        r"(\bSELECT\b\s+[\w\*,\s]+\bFROM\b\s+\w+)",        # SELECT ... FROM table
+        r"(\bINSERT\b\s+\bINTO\b\s+\w+)",                    # INSERT INTO table
+        r"(\bUPDATE\b\s+\w+\s+\bSET\b)",                     # UPDATE table SET
+        r"(\bDELETE\b\s+\bFROM\b\s+\w+\s+\bWHERE\b)",       # DELETE FROM table WHERE
+        r"(\b(DROP|ALTER|TRUNCATE)\b\s+\b(TABLE|DATABASE|INDEX)\b)",  # DDL statements
+        r"(\bUNION\b\s+(ALL\s+)?\bSELECT\b)",                # UNION [ALL] SELECT
+        r"(\bCREATE\b\s+\b(TABLE|DATABASE|INDEX)\b)",         # CREATE TABLE/DATABASE
         r"(\b(OR|AND)\b\s+\d+\s*=\s*\d+)",
         r"(--\s*$|;--)",
-        r"(\bEXEC\b|\bEXECUTE\b)",
+        r"(\bEXEC(UTE)?\b\s*\()",
 
         # XSS patterns
         r"(<script[^>]*>)",
@@ -997,10 +1029,17 @@ class RequestSanitizationMiddleware(MiddlewareMixin):
         return False
 
     def _get_client_ip(self, request: HttpRequest) -> str:
-        """Extract client IP address."""
+        """Extract client IP address.
+
+        Uses TRUSTED_PROXY_COUNT from settings to select the correct
+        IP from X-Forwarded-For, counting from the right.
+        """
         forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if forwarded_for:
-            return forwarded_for.split(',')[0].strip()
+            ips = [ip.strip() for ip in forwarded_for.split(',')]
+            trusted_proxy_count = getattr(settings, 'TRUSTED_PROXY_COUNT', 1)
+            index = max(len(ips) - trusted_proxy_count, 0)
+            return ips[index]
         return request.META.get('REMOTE_ADDR', '0.0.0.0')
 
     def _blocked_response(self) -> JsonResponse:

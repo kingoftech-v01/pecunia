@@ -212,11 +212,13 @@ class BudgetRepository @Inject constructor(
                     Result.success(serverBudget)
                 } else {
                     val localBudget = budgetDao.getById(budgetId)
-                    Result.success(localBudget!!)
+                        ?: return@withContext Result.failure(Exception("Budget not found: $budgetId"))
+                    Result.success(localBudget)
                 }
             } catch (e: Exception) {
                 val localBudget = budgetDao.getById(budgetId)
-                Result.success(localBudget!!)
+                    ?: return@withContext Result.failure(Exception("Budget not found: $budgetId"))
+                Result.success(localBudget)
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -399,8 +401,8 @@ class BudgetRepository @Inject constructor(
             val userId = authRepository.getCurrentUserId()
                 ?: return@withContext Result.failure(AuthException("User not authenticated"))
 
-            // Get all active budgets and reset spent amount
-            val budgets = budgetDao.getUnsyncedBudgets() // Just to get the list - we'll update all active ones
+            // Get all budgets for this user and reset spent amount for active ones
+            val budgets = budgetDao.getAllByUserIdSync(userId)
             budgets.forEach { budget ->
                 if (budget.isActive) {
                     budgetDao.updateSpentAmount(budget.id, 0.0)

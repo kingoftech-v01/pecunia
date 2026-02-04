@@ -1,6 +1,6 @@
 <!-- Flash Messages -->
 {% if messages %}
-<div x-data="{ messages: {{ messages|safe }} }" class="fixed top-20 right-4 z-50 space-y-2">
+<div x-data="{ messages: [] }" class="fixed top-20 right-4 z-50 space-y-2">
     {% for message in messages %}
     <div x-data="{ show: true }"
          x-show="show"

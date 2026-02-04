@@ -459,11 +459,21 @@ class NotificationService:
         """Get current notification preferences."""
         return self._preferences
 
+    # Allowlist of preference keys that can be updated
+    _ALLOWED_PREFERENCE_KEYS = frozenset({
+        'enabled', 'sound_enabled', 'budget_alerts', 'transaction_alerts',
+        'sync_notifications', 'update_notifications', 'alert_threshold',
+        'quiet_hours_start', 'quiet_hours_end', 'desktop_notifications',
+    })
+
     def update_preference(self, key: str, value: Any) -> None:
         """Update a single preference value."""
+        if key not in self._ALLOWED_PREFERENCE_KEYS:
+            logger.warning("Rejected update to non-allowed preference key: %s", key)
+            return
         if hasattr(self._preferences, key):
             setattr(self._preferences, key, value)
-            logger.debug(f"Notification preference '{key}' updated to {value}")
+            logger.debug("Notification preference '%s' updated", key)
 
     # =========================================================================
     # Notification Methods

@@ -11,9 +11,10 @@ from typing import Optional, Tuple
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.contrib.auth.tokens import PasswordResetTokenGenerator as DjangoPasswordResetTokenGenerator
 from django.utils.crypto import constant_time_compare, salted_hmac
 from django.utils.http import base36_to_int, int_to_base36
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -75,7 +76,7 @@ class BaseTokenGenerator:
         try:
             ts_b36, _ = token.split("-", 1)
             ts = base36_to_int(ts_b36)
-            return datetime.fromtimestamp(ts)
+            return datetime.fromtimestamp(ts, tz=timezone.utc)
         except (ValueError, TypeError):
             return None
 
@@ -114,8 +115,8 @@ class BaseTokenGenerator:
         return int(dt.timestamp())
 
     def _now(self) -> datetime:
-        """Get current datetime."""
-        return datetime.now()
+        """Get current datetime (timezone-aware)."""
+        return timezone.now()
 
 
 class EmailVerificationTokenGenerator(BaseTokenGenerator):
@@ -132,7 +133,7 @@ class EmailVerificationTokenGenerator(BaseTokenGenerator):
         Include email verification status in hash.
         Token becomes invalid when email is verified.
         """
-        email_verified = getattr(user, 'email_verified', False)
+        email_verified = getattr(user, 'is_email_verified', getattr(user, 'email_verified', False))
         return (
             f"{user.pk}"
             f"{timestamp}"

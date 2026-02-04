@@ -41,16 +41,21 @@ class PlaidProvider(BaseBankProvider):
 
     def __init__(self):
         """Initialize Plaid provider."""
-        super().__init__()
         self.client_id = getattr(settings, 'PLAID_CLIENT_ID', None)
         self.secret = getattr(settings, 'PLAID_SECRET', None)
         self.environment = getattr(settings, 'PLAID_ENVIRONMENT', 'sandbox')
+        super().__init__()
 
     def _validate_configuration(self):
         """Validate Plaid configuration."""
         if not self.client_id:
             raise ProviderError(
                 "PLAID_CLIENT_ID not configured",
+                code='configuration_error'
+            )
+        if not self.secret:
+            raise ProviderError(
+                "PLAID_SECRET not configured",
                 code='configuration_error'
             )
 
@@ -68,8 +73,6 @@ class PlaidProvider(BaseBankProvider):
         """Get request headers."""
         return {
             'Content-Type': 'application/json',
-            'PLAID-CLIENT-ID': self.client_id,
-            'PLAID-SECRET': self.secret,
         }
 
     def _request(

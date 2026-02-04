@@ -94,8 +94,10 @@ object NetworkModule {
     @Singleton
     fun provideCertificatePinner(): CertificatePinner {
         return CertificatePinner.Builder()
-            .add("api.pecunia.com", "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
-            // Add backup pins as needed
+            // TODO: Replace with real certificate pins before production release.
+            // Generate pins using: openssl s_client -connect api.pecunia.com:443 | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | openssl enc -base64
+            // .add("api.pecunia.com", "sha256/YOUR_PRIMARY_PIN_HERE=")
+            // .add("api.pecunia.com", "sha256/YOUR_BACKUP_PIN_HERE=")
             .build()
     }
 
@@ -109,6 +111,7 @@ object NetworkModule {
     fun provideAuthenticatedOkHttpClient(
         authInterceptor: AuthInterceptor,
         loggingInterceptor: HttpLoggingInterceptor,
+        certificatePinner: CertificatePinner,
         cache: Cache,
         connectionPool: ConnectionPool
     ): OkHttpClient {
@@ -125,12 +128,13 @@ object NetworkModule {
                     .build()
                 chain.proceed(request)
             }
+            .certificatePinner(certificatePinner)
             .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
             .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
             .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
             .cache(cache)
             .connectionPool(connectionPool)
-            .retryOnConnectionFailure(true)
+            .retryOnConnectionFailure(false)
             .build()
     }
 
@@ -143,24 +147,29 @@ object NetworkModule {
     @PublicClient
     fun providePublicOkHttpClient(
         loggingInterceptor: HttpLoggingInterceptor,
+        certificatePinner: CertificatePinner,
         cache: Cache,
         connectionPool: ConnectionPool
     ): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
             .addInterceptor { chain ->
-                val request = chain.request().newBuilder()
+                val requestBuilder = chain.request().newBuilder()
                     .header("Accept", "application/json")
-                    .header("Content-Type", "application/json")
-                    .build()
-                chain.proceed(request)
+                // Only set Content-Type for non-multipart requests
+                val body = chain.request().body
+                if (body == null || body.contentType()?.type != "multipart") {
+                    requestBuilder.header("Content-Type", "application/json")
+                }
+                chain.proceed(requestBuilder.build())
             }
+            .certificatePinner(certificatePinner)
             .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
             .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
             .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
             .cache(cache)
             .connectionPool(connectionPool)
-            .retryOnConnectionFailure(true)
+            .retryOnConnectionFailure(false)
             .build()
     }
 

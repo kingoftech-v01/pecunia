@@ -272,18 +272,17 @@ class BankConnection(models.Model, EncryptedFieldMixin):
         Check if the access token has expired.
 
         Returns:
-            bool: True if token_expires_at is set AND current time >= expiry.
-                  False if token_expires_at is not set (assumes valid).
+            bool: True if token_expires_at is not set (assumes expired for
+                  safety) or if current time >= expiry.
+                  False only if token_expires_at is set and not yet reached.
 
         Security Note:
-            Consider returning True if token_expires_at is not set,
-            forcing a refresh check. Current behavior assumes tokens
-            without expiry are perpetually valid, which may not be safe.
-
-        TODO: Evaluate changing default to True for stricter security.
+            Defaults to True when token_expires_at is not set, forcing
+            a refresh check. This is the safer default as it ensures
+            tokens without known expiry are always verified.
         """
         if not self.token_expires_at:
-            return False
+            return True
         return timezone.now() >= self.token_expires_at
 
     @property

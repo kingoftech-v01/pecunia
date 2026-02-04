@@ -162,16 +162,20 @@ Guidelines:
             transaction_date__gte=cutoff_date
         ).order_by('transaction_date', 'amount')
 
+        # Build index once for O(n) overall duplicate detection
+        tx_list = list(transactions)
+        tx_index = self._build_transaction_index(tx_list)
+
         # Group potential duplicates
         duplicate_groups = []
         checked_ids = set()
 
-        for tx in transactions:
+        for tx in tx_list:
             if tx.id in checked_ids:
                 continue
 
-            # Find potential duplicates
-            potential_duplicates = self._find_potential_duplicates(tx, transactions)
+            # Find potential duplicates using pre-built index
+            potential_duplicates = self._find_potential_duplicates(tx, tx_list, _tx_index=tx_index)
 
             if potential_duplicates:
                 group = {
@@ -576,47 +580,70 @@ Analyze this and respond with JSON:
     def _find_potential_duplicates(
         self,
         transaction: Transaction,
-        all_transactions
+        all_transactions,
+        _tx_index: dict = None,
     ) -> List[Transaction]:
-        """Find potential duplicates of a transaction."""
+        """Find potential duplicates of a transaction using indexed lookup."""
         duplicates = []
         tx_date = transaction.transaction_date
         tx_amount = float(transaction.amount)
 
-        for other in all_transactions:
+        if tx_amount == 0:
+            return duplicates
+
+        # Build an index keyed by (merchant_or_desc, rounded_amount) if not provided
+        # This converts O(n^2) to O(n) for the overall duplicate detection
+        if _tx_index is None:
+            _tx_index = self._build_transaction_index(all_transactions)
+
+        # Determine the lookup key for this transaction
+        key = self._get_duplicate_key(transaction)
+        if key is None:
+            return duplicates
+
+        candidates = _tx_index.get(key, [])
+
+        for other in candidates:
             if other.id == transaction.id:
                 continue
 
             # Check date proximity
             date_diff = abs((other.transaction_date - tx_date).days)
-            if date_diff > 3:  # More than 3 days apart
+            if date_diff > 3:
                 continue
 
             # Check amount similarity
             other_amount = float(other.amount)
-            if tx_amount == 0 or other_amount == 0:
+            if other_amount == 0:
                 continue
 
             amount_diff = abs(tx_amount - other_amount) / max(tx_amount, other_amount)
             if amount_diff > self.DUPLICATE_AMOUNT_TOLERANCE:
                 continue
 
-            # Check merchant/description similarity
-            if transaction.merchant and other.merchant:
-                if transaction.merchant.lower() != other.merchant.lower():
-                    continue
-            elif transaction.description and other.description:
-                # Check description similarity
-                desc1 = transaction.description.lower()[:50]
-                desc2 = other.description.lower()[:50]
-                if desc1 != desc2:
-                    continue
-            else:
-                continue
-
             duplicates.append(other)
 
         return duplicates
+
+    def _get_duplicate_key(self, transaction: Transaction) -> Optional[str]:
+        """Generate a grouping key for duplicate detection."""
+        if transaction.merchant:
+            return transaction.merchant.lower().strip()
+        elif transaction.description:
+            return transaction.description.lower()[:50]
+        return None
+
+    def _build_transaction_index(
+        self,
+        transactions
+    ) -> Dict[str, List[Transaction]]:
+        """Build an index of transactions keyed by merchant/description for O(1) lookup."""
+        index: Dict[str, List[Transaction]] = defaultdict(list)
+        for tx in transactions:
+            key = self._get_duplicate_key(tx)
+            if key is not None:
+                index[key].append(tx)
+        return index
 
     def _calculate_duplicate_confidence(
         self,
@@ -841,19 +868,19 @@ Respond with JSON array:
         """Save anomaly alert to database."""
         try:
             risk_to_priority = {
-                "low": "low",
-                "medium": "medium",
-                "high": "urgent"
+                "low": 1,
+                "medium": 3,
+                "high": 4,
             }
 
             AIRecommendation.objects.create(
                 user=user,
-                type='anomaly',
+                type=AIRecommendation.RecommendationType.ANOMALY,
                 title=f"Unusual Transaction: {self.format_currency(float(transaction.amount))}",
                 content=analysis.get("explanation", "Unusual spending pattern detected"),
                 priority=risk_to_priority.get(
                     analysis.get("risk_level", "medium"),
-                    "medium"
+                    3
                 ),
                 related_transaction=transaction,
                 related_category=transaction.category,

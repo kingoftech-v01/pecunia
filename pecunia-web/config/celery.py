@@ -222,6 +222,7 @@ def debug_task(self):
 # =============================================================================
 
 from celery import Task
+from django.core.exceptions import ValidationError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -235,9 +236,17 @@ class BaseTaskWithRetry(Task):
     - Exponential backoff retry
     - Comprehensive logging
     - Error tracking
+    - Excludes non-retriable exceptions (validation, permission, etc.)
     """
 
     autoretry_for = (Exception,)
+    dont_autoretry_for = (
+        ValueError,
+        TypeError,
+        KeyError,
+        PermissionError,
+        ValidationError,
+    )
     retry_backoff = True
     retry_backoff_max = 600  # 10 minutes max
     retry_jitter = True

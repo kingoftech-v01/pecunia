@@ -82,9 +82,7 @@ object AppModule {
     @Singleton
     fun provideGson(): Gson {
         return GsonBuilder()
-            .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-            .serializeNulls()
-            .setPrettyPrinting()
+            .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
             .create()
     }
 

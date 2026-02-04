@@ -72,23 +72,43 @@ class EmailService:
         """Generate cache key for rate limiting."""
         return f"email_rate_limit:{email_type}:{user_id}"
 
-    def _check_rate_limit(self, user_id: int, email_type: str, limit: int) -> bool:
+    def _acquire_rate_limit(self, user_id: int, email_type: str, limit: int) -> bool:
         """
-        Check if user has exceeded email rate limit.
-        Returns True if within limit, False if exceeded.
-        """
-        key = self._get_rate_limit_key(user_id, email_type)
-        current = cache.get(key, 0)
-        return current < limit
+        Atomically check and increment the rate limit counter.
 
-    def _increment_rate_limit(self, user_id: int, email_type: str):
-        """Increment the rate limit counter for a user."""
+        Uses atomic cache operations to avoid the TOCTOU race condition
+        inherent in a separate check-then-increment approach.
+
+        Returns True if within limit (slot acquired), False if exceeded.
+        """
         key = self._get_rate_limit_key(user_id, email_type)
         try:
-            cache.incr(key)
+            # Try to increment atomically.  If the key already exists
+            # this is an atomic read-and-increment operation.
+            new_value = cache.incr(key)
         except ValueError:
-            # Key doesn't exist, create it
-            cache.set(key, 1, self.RATE_LIMIT_WINDOW)
+            # Key does not exist yet -- initialise it to 1 with the
+            # full rate-limit window as its TTL.  There is a small
+            # window where two concurrent requests could both fail the
+            # incr and race to set, but add() is atomic: only the first
+            # caller wins; the others fall through to incr again.
+            added = cache.add(key, 1, self.RATE_LIMIT_WINDOW)
+            if added:
+                new_value = 1
+            else:
+                # Another thread created the key between our incr and add.
+                new_value = cache.incr(key)
+
+        if new_value > limit:
+            # We incremented past the limit -- roll back the counter
+            # so it stays accurate for future checks.
+            try:
+                cache.decr(key)
+            except ValueError:
+                pass
+            return False
+
+        return True
 
     def _get_base_url(self) -> str:
         """Get the base URL for the application."""
@@ -175,8 +195,8 @@ class EmailService:
         Raises:
             RateLimitExceeded: If user has exceeded rate limit
         """
-        # Check rate limit
-        if not self._check_rate_limit(
+        # Atomically acquire a rate-limit slot before doing any work.
+        if not self._acquire_rate_limit(
             user.id, 'verification', self.RATE_LIMIT_VERIFICATION
         ):
             raise RateLimitExceeded(
@@ -202,18 +222,13 @@ class EmailService:
         }
 
         # Send email
-        success = self._send_html_email(
+        return self._send_html_email(
             subject=f"Verify your email - {self.config.site_name}",
             template_name='emails/verification.html',
             context=context,
             recipient_email=user.email,
             fail_silently=fail_silently
         )
-
-        if success:
-            self._increment_rate_limit(user.id, 'verification')
-
-        return success
 
     def send_password_reset_email(
         self,
@@ -233,8 +248,8 @@ class EmailService:
         Raises:
             RateLimitExceeded: If user has exceeded rate limit
         """
-        # Check rate limit
-        if not self._check_rate_limit(
+        # Atomically acquire a rate-limit slot before doing any work.
+        if not self._acquire_rate_limit(
             user.id, 'password_reset', self.RATE_LIMIT_PASSWORD_RESET
         ):
             raise RateLimitExceeded(
@@ -260,18 +275,13 @@ class EmailService:
         }
 
         # Send email
-        success = self._send_html_email(
+        return self._send_html_email(
             subject=f"Reset your password - {self.config.site_name}",
             template_name='emails/password_reset.html',
             context=context,
             recipient_email=user.email,
             fail_silently=fail_silently
         )
-
-        if success:
-            self._increment_rate_limit(user.id, 'password_reset')
-
-        return success
 
     def send_welcome_email(
         self,

@@ -636,6 +636,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ categories_json|json_script:"categories-data" }}
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 <script>
@@ -653,7 +654,7 @@ function transactionForm() {
         categoryId: '{{ transaction.category.id|default:"" }}',
         reference: '{{ transaction.reference|default:""|escapejs }}',
         notes: '{{ transaction.notes|default:""|escapejs }}',
-        tags: [{% for tag in transaction.tags.all %}'{{ tag.name }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+        tags: [{% for tag in transaction.tags.all %}'{{ tag.name|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
         newTag: '',
         files: [],
         isRecurring: {{ transaction.is_recurring|yesno:"true,false"|default:"false" }},
@@ -661,7 +662,7 @@ function transactionForm() {
         recurringEndDate: '{{ transaction.recurring_end_date|date:"Y-m-d"|default:"" }}',
 
         // Categories
-        categories: {{ categories_json|safe|default:"[]" }},
+        categories: JSON.parse(document.getElementById('categories-data').textContent || '[]'),
         suggestedCategory: null,
 
         // UI State

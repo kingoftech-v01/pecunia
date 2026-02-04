@@ -43,12 +43,29 @@ class AIRecommendation(models.Model):
     content = models.TextField()
 
     # Priority for display ordering (1-5 scale)
+    PRIORITY_MAP = {
+        'low': 1,
+        'medium': 2,
+        'high': 3,
+        'urgent': 4,
+        'critical': 5,
+    }
+
     priority = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(5)],
         default=3,
         db_index=True,
         help_text="Priority level (1=lowest, 5=highest)"
     )
+
+    @classmethod
+    def normalize_priority(cls, value):
+        """Convert string priority to integer if needed."""
+        if isinstance(value, str):
+            return cls.PRIORITY_MAP.get(value.lower(), 3)
+        if isinstance(value, int) and 1 <= value <= 5:
+            return value
+        return 3
 
     # Status
     is_read = models.BooleanField(default=False)

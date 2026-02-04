@@ -516,7 +516,7 @@ Respond with JSON:
     def _gather_budget_data(self, user) -> Dict[str, Any]:
         """Gather user's budget data."""
         try:
-            from apps.budgets.models import Budget
+            from apps.budgets.models import Budget, BudgetItem
         except ImportError:
             return {"has_budgets": False}
 
@@ -524,37 +524,33 @@ Respond with JSON:
 
         budgets = Budget.objects.filter(
             user=user,
-            month=today.month,
-            year=today.year,
-            is_active=True
-        ).select_related('category')
+            is_active=True,
+            start_date__lte=today,
+            end_date__gte=today,
+        ).prefetch_related('items', 'items__category')
 
         if not budgets.exists():
             return {"has_budgets": False}
 
         budget_status = []
         for budget in budgets:
-            spent = Transaction.objects.filter(
-                user=user,
-                category=budget.category,
-                type='expense',
-                transaction_date__month=today.month,
-                transaction_date__year=today.year
-            ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            for item in budget.items.all():
+                planned = float(item.planned_amount) if item.planned_amount else 0
+                spent = float(item.spent_amount) if item.spent_amount else 0
+                percentage = (spent / planned * 100) if planned > 0 else 0
 
-            percentage = (float(spent) / float(budget.amount) * 100) if budget.amount else 0
-
-            budget_status.append({
-                "category": budget.category.name if budget.category else "Unknown",
-                "category_id": str(budget.category.id) if budget.category else None,
-                "budgeted": float(budget.amount),
-                "spent": float(spent),
-                "remaining": float(budget.amount - spent),
-                "percentage": round(percentage, 1),
-                "status": "over" if percentage > 100 else (
-                    "warning" if percentage > 80 else "ok"
-                )
-            })
+                budget_status.append({
+                    "budget_name": budget.name,
+                    "category": item.category.name if item.category else (item.name or "Unknown"),
+                    "category_id": str(item.category.id) if item.category else None,
+                    "budgeted": planned,
+                    "spent": spent,
+                    "remaining": planned - spent,
+                    "percentage": round(percentage, 1),
+                    "status": "over" if percentage > 100 else (
+                        "warning" if percentage > 80 else "ok"
+                    )
+                })
 
         return {
             "has_budgets": True,
@@ -740,6 +736,15 @@ Respond with JSON:
 
         return processed
 
+    # Mapping from AI-generated type strings to model RecommendationType values
+    TYPE_MAP = {
+        'budget': AIRecommendation.RecommendationType.BUDGET_ALERT,
+        'spending': AIRecommendation.RecommendationType.SPENDING_INSIGHT,
+        'saving': AIRecommendation.RecommendationType.SAVING_TIP,
+        'goal': AIRecommendation.RecommendationType.SAVING_TIP,
+        'anomaly': AIRecommendation.RecommendationType.ANOMALY,
+    }
+
     def _save_recommendations(
         self,
         user,
@@ -747,25 +752,34 @@ Respond with JSON:
     ) -> None:
         """Save recommendations to database."""
         try:
-            # Expire old recommendations of same types
-            types_to_expire = set(r["type"] for r in recommendations)
-            AIRecommendation.objects.filter(
-                user=user,
-                type__in=types_to_expire,
-                is_dismissed=False
-            ).update(
-                is_dismissed=True,
-                expires_at=timezone.now()
-            )
+            # Mark old recommendations of same types as expired (but don't dismiss active ones)
+            mapped_types = set()
+            for r in recommendations:
+                mapped = self.TYPE_MAP.get(r["type"])
+                if mapped:
+                    mapped_types.add(mapped)
+
+            if mapped_types:
+                AIRecommendation.objects.filter(
+                    user=user,
+                    type__in=mapped_types,
+                    is_dismissed=False,
+                    is_read=True,
+                ).update(
+                    expires_at=timezone.now()
+                )
 
             # Create new recommendations
             for rec in recommendations:
+                rec_type = self.TYPE_MAP.get(rec['type'], AIRecommendation.RecommendationType.SPENDING_INSIGHT)
+                priority_value = AIRecommendation.normalize_priority(rec.get('priority', 'medium'))
+
                 AIRecommendation.objects.create(
                     user=user,
                     title=rec['title'],
                     content=rec['content'],
-                    type=rec['type'],
-                    priority=rec['priority'],
+                    type=rec_type,
+                    priority=priority_value,
                     related_category_id=rec.get('category_id'),
                     confidence_score=0.8,
                     metadata={
@@ -808,12 +822,13 @@ Respond with JSON:
             # Create a summary recommendation
             summary = insights.get("summary", "")
             if summary and insights.get("spending_score", 50) < 60:
+                priority_value = 2 if insights.get("spending_score", 50) >= 40 else 3
                 AIRecommendation.objects.create(
                     user=user,
                     title=f"Monthly Review: {month}/{year}",
                     content=summary,
-                    type='trend',
-                    priority='medium' if insights.get("spending_score", 50) >= 40 else 'high',
+                    type=AIRecommendation.RecommendationType.SPENDING_INSIGHT,
+                    priority=priority_value,
                     metadata={
                         "month": month,
                         "year": year,

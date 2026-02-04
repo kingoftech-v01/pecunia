@@ -256,9 +256,8 @@ class TokenStorage:
             return json.load(f)
 
     def _save_tokens_to_file(self, tokens: AuthTokens) -> bool:
-        """Save tokens to fallback file (less secure)."""
+        """Save tokens to fallback file with Fernet encryption."""
         try:
-            # Note: In production, this should be encrypted
             data = {
                 'access_token': tokens.access_token,
                 'refresh_token': tokens.refresh_token,
@@ -266,8 +265,35 @@ class TokenStorage:
                 'expires_at': tokens.expires_at.isoformat() if tokens.expires_at else None,
             }
             self._fallback_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(self._fallback_file, 'w') as f:
-                json.dump(data, f)
+
+            plaintext = json.dumps(data).encode('utf-8')
+
+            try:
+                from cryptography.fernet import Fernet
+                # Derive a key from a machine-specific secret stored alongside
+                key_file = self._fallback_file.with_suffix('.key')
+                if key_file.exists():
+                    key = key_file.read_bytes()
+                else:
+                    key = Fernet.generate_key()
+                    key_file.write_bytes(key)
+                    try:
+                        key_file.chmod(0o600)
+                    except (AttributeError, OSError):
+                        pass
+                fernet = Fernet(key)
+                ciphertext = fernet.encrypt(plaintext)
+                with open(self._fallback_file, 'wb') as f:
+                    f.write(ciphertext)
+            except ImportError:
+                logger.warning(
+                    "cryptography library not available; "
+                    "falling back to plaintext token storage. "
+                    "Install 'cryptography' for encrypted storage."
+                )
+                with open(self._fallback_file, 'w') as f:
+                    json.dump(data, f)
+
             # Set restrictive permissions on Unix
             try:
                 self._fallback_file.chmod(0o600)
@@ -279,12 +305,34 @@ class TokenStorage:
             return False
 
     def _load_tokens_from_file(self) -> Optional[AuthTokens]:
-        """Load tokens from fallback file."""
+        """Load tokens from fallback file (supports Fernet-encrypted or plaintext)."""
         try:
             if not self._fallback_file.exists():
                 return None
-            with open(self._fallback_file, 'r') as f:
-                data = json.load(f)
+
+            # Try Fernet-encrypted file first
+            try:
+                from cryptography.fernet import Fernet, InvalidToken
+                key_file = self._fallback_file.with_suffix('.key')
+                if key_file.exists():
+                    key = key_file.read_bytes()
+                    fernet = Fernet(key)
+                    with open(self._fallback_file, 'rb') as f:
+                        ciphertext = f.read()
+                    plaintext = fernet.decrypt(ciphertext)
+                    data = json.loads(plaintext.decode('utf-8'))
+                else:
+                    # No key file, try plaintext fallback
+                    with open(self._fallback_file, 'r') as f:
+                        data = json.load(f)
+            except ImportError:
+                # cryptography not available, read as plaintext
+                with open(self._fallback_file, 'r') as f:
+                    data = json.load(f)
+            except Exception:
+                # Decryption failed, try plaintext fallback
+                with open(self._fallback_file, 'r') as f:
+                    data = json.load(f)
 
             expires_at = None
             if data.get('expires_at'):
@@ -333,8 +381,12 @@ class AuthService:
 
     @property
     def is_authenticated(self) -> bool:
-        """Check if user is currently authenticated."""
-        return self._tokens is not None and self._tokens.access_token
+        """Check if user is currently authenticated with a non-expired token."""
+        return (
+            self._tokens is not None
+            and bool(self._tokens.access_token)
+            and not self._tokens.is_expired()
+        )
 
     @property
     def current_user(self) -> Optional[User]:
@@ -399,7 +451,8 @@ class AuthService:
             # Fetch user info
             self._user = await self._fetch_current_user()
 
-            logger.info(f"User {email} logged in successfully")
+            masked_email = email[0] + '***@' + email.split('@')[-1] if '@' in email else '***'
+            logger.info(f"User {masked_email} logged in successfully")
             self._notify_auth_state_change(True)
 
             return self._user
@@ -642,7 +695,8 @@ class AuthService:
                 error_msg = self._extract_error(response)
                 raise APIError(error_msg or "Failed to request password reset")
 
-            logger.info(f"Password reset requested for {email}")
+            masked_email = email[0] + '***@' + email.split('@')[-1] if '@' in email else '***'
+            logger.info(f"Password reset requested for {masked_email}")
             return True
 
         except APIError:

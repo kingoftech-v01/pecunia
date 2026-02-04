@@ -66,19 +66,26 @@ class BackupCodeService:
     CODE_CHARS = CODE_CHARS.replace('0', '').replace('O', '').replace('I', '').replace('1', '').replace('L', '')
 
     @classmethod
-    def _hash_code(cls, code: str) -> str:
+    def _hash_code(cls, code: str, salt: str = None) -> str:
         """
-        Hash a backup code using SHA-256.
+        Hash a backup code using HMAC-SHA256 with the Django secret key as salt.
 
         Args:
             code: Plain text backup code
+            salt: Optional salt (defaults to Django SECRET_KEY)
 
         Returns:
             str: Hexadecimal hash of the code
         """
         # Normalize: uppercase and remove dashes/spaces
         normalized = code.upper().replace('-', '').replace(' ', '')
-        return hashlib.sha256(normalized.encode('utf-8')).hexdigest()
+        key = (salt or settings.SECRET_KEY).encode('utf-8')
+        return hashlib.pbkdf2_hmac(
+            'sha256',
+            normalized.encode('utf-8'),
+            key,
+            iterations=100_000,
+        ).hex()
 
     @classmethod
     def _generate_single_code(cls) -> str:

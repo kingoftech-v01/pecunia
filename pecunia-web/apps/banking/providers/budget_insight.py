@@ -10,6 +10,7 @@ from decimal import Decimal
 from typing import Optional, List
 from urllib.parse import urlencode
 from django.conf import settings
+from django.utils import timezone
 
 from .base import (
     BaseBankProvider,
@@ -41,11 +42,11 @@ class BudgetInsightProvider(BaseBankProvider):
 
     def __init__(self):
         """Initialize Budget Insight provider."""
-        super().__init__()
         self.client_id = getattr(settings, 'BUDGET_INSIGHT_CLIENT_ID', None)
         self.client_secret = getattr(settings, 'BUDGET_INSIGHT_CLIENT_SECRET', None)
         self.domain = getattr(settings, 'BUDGET_INSIGHT_DOMAIN', None)
         self.use_sandbox = getattr(settings, 'BUDGET_INSIGHT_SANDBOX', True)
+        super().__init__()
 
     def _validate_configuration(self):
         """Validate Budget Insight configuration."""
@@ -156,7 +157,7 @@ class BudgetInsightProvider(BaseBankProvider):
 
         # Calculate expiration
         expires_in = response.get('expires_in', 3600)
-        token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+        token_expires_at = timezone.now() + timedelta(seconds=expires_in)
 
         return AuthorizationResult(
             access_token=response['access_token'],
@@ -184,7 +185,7 @@ class BudgetInsightProvider(BaseBankProvider):
         )
 
         expires_in = response.get('expires_in', 3600)
-        token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+        token_expires_at = timezone.now() + timedelta(seconds=expires_in)
 
         return AuthorizationResult(
             access_token=response['access_token'],
@@ -218,7 +219,7 @@ class BudgetInsightProvider(BaseBankProvider):
                 available_balance=Decimal(str(acc['coming']))
                     if acc.get('coming') is not None else None,
                 currency=acc.get('currency', {}).get('id', 'EUR'),
-                account_number_masked=acc.get('number'),
+                account_number_masked=self._mask_account_number(acc.get('number')),
                 iban_masked=self._mask_iban(acc.get('iban')),
             )
             accounts.append(account)
@@ -357,6 +358,14 @@ class BudgetInsightProvider(BaseBankProvider):
             access_token
         )
         return response
+
+    def _mask_account_number(self, number: Optional[str]) -> Optional[str]:
+        """Mask account number for display."""
+        if not number:
+            return None
+        if len(number) <= 4:
+            return number
+        return f"****{number[-4:]}"
 
     def _mask_iban(self, iban: Optional[str]) -> Optional[str]:
         """Mask IBAN for display."""

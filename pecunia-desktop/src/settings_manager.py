@@ -69,7 +69,7 @@ SETTINGS_VERSION = 2
 @dataclass
 class APISettings:
     """API connection settings."""
-    api_url: str = "http://localhost:8000/api/v1"
+    api_url: str = "https://localhost:8000/api/v1"
     timeout_seconds: int = 30
     max_retries: int = 3
     verify_ssl: bool = True
@@ -557,10 +557,9 @@ class SettingsManager:
             with open(temp_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False, default=str)
 
-            # Atomic rename (on Windows, need to remove target first)
-            if self._settings_path.exists():
-                self._settings_path.unlink()
-            temp_path.rename(self._settings_path)
+            # Atomic rename using os.replace (works cross-platform)
+            import os as _os
+            _os.replace(str(temp_path), str(self._settings_path))
 
             logger.info(f"Settings saved to {self._settings_path}")
             return True

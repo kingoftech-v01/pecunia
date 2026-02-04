@@ -373,8 +373,16 @@ class SyncManager(QObject):
             True if network is available, False otherwise.
         """
         try:
-            # Try to connect to a reliable host
-            socket.create_connection(("8.8.8.8", 53), timeout=3)
+            # Check connectivity against the actual API server instead of Google DNS
+            if self._config.api_base_url:
+                import urllib.parse
+                parsed = urllib.parse.urlparse(self._config.api_base_url)
+                host = parsed.hostname or "localhost"
+                port = parsed.port or (443 if parsed.scheme == "https" else 80)
+                socket.create_connection((host, port), timeout=3)
+            else:
+                # Fallback: try multiple DNS resolvers
+                socket.create_connection(("1.1.1.1", 53), timeout=3)
             self._last_connectivity_check = datetime.utcnow()
             self._set_online_status(True)
             return True

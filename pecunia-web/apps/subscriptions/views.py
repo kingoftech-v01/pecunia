@@ -30,7 +30,7 @@ from .serializers import (
     SubscriptionFeaturesSerializer,
     PaymentMethodSerializer,
 )
-from .stripe_service import stripe_service
+from .stripe_service import stripe_service, StripeServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
     - GET /api/v1/subscriptions/plans/ - List all active plans
     - GET /api/v1/subscriptions/plans/{uuid}/ - Get plan details
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     lookup_field = 'id'
 
     def get_queryset(self):
@@ -231,23 +231,18 @@ class SubscriptionViewSet(viewsets.ViewSet):
         cancel_at_period_end = serializer.validated_data.get('cancel_at_period_end', True)
         reason = serializer.validated_data.get('reason', '')
 
-        success, error = stripe_service.cancel_subscription(
-            subscription.stripe_subscription_id,
-            at_period_end=cancel_at_period_end
-        )
-
-        if not success:
-            logger.error(f"Failed to cancel subscription: {error}")
+        try:
+            stripe_service.cancel_subscription(
+                subscription,
+                cancel_immediately=not cancel_at_period_end,
+                cancellation_reason=reason
+            )
+        except StripeServiceError as e:
+            logger.error(f"Failed to cancel subscription: {e}")
             return Response(
-                {'detail': f'Failed to cancel subscription: {error}'},
+                {'detail': 'Failed to cancel subscription.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-        # Update local subscription
-        subscription.cancel_at_period_end = cancel_at_period_end
-        if not cancel_at_period_end:
-            subscription.status = 'canceled'
-        subscription.save()
 
         # Log event
         SubscriptionEvent.objects.create(
@@ -283,20 +278,14 @@ class SubscriptionViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        success, error = stripe_service.reactivate_subscription(
-            subscription.stripe_subscription_id
-        )
-
-        if not success:
-            logger.error(f"Failed to reactivate subscription: {error}")
+        try:
+            stripe_service.reactivate_subscription(subscription)
+        except StripeServiceError as e:
+            logger.error(f"Failed to reactivate subscription: {e}")
             return Response(
-                {'detail': f'Failed to reactivate subscription: {error}'},
+                {'detail': 'Failed to reactivate subscription.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-        # Update local subscription
-        subscription.cancel_at_period_end = False
-        subscription.save()
 
         # Log event
         SubscriptionEvent.objects.create(
@@ -336,41 +325,30 @@ class SubscriptionViewSet(viewsets.ViewSet):
             subscription.billing_interval
         )
 
-        # Get the appropriate Stripe price ID
-        if billing_interval == 'year':
-            new_price_id = new_plan.stripe_price_id_yearly
-        else:
-            new_price_id = new_plan.stripe_price_id_monthly
+        billing_cycle = 'yearly' if billing_interval == 'year' else 'monthly'
 
-        if not new_price_id:
-            return Response(
-                {'detail': 'Plan pricing not configured.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        success, error = stripe_service.update_subscription(
-            subscription.stripe_subscription_id,
-            new_price_id
-        )
-
-        if not success:
-            logger.error(f"Failed to update subscription: {error}")
-            return Response(
-                {'detail': f'Failed to update subscription: {error}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Determine if upgrade or downgrade
+        # Determine if upgrade or downgrade before the service updates the subscription
         tier_order = ['free', 'premium', 'pro', 'business']
         old_index = tier_order.index(subscription.plan.tier) if subscription.plan.tier in tier_order else 0
         new_index = tier_order.index(new_plan.tier) if new_plan.tier in tier_order else 0
         event_type = 'upgraded' if new_index > old_index else 'downgraded'
-
-        # Update local subscription
         old_plan_name = subscription.plan.name
-        subscription.plan = new_plan
-        subscription.billing_interval = billing_interval
-        subscription.save()
+
+        try:
+            stripe_service.update_subscription(
+                subscription,
+                new_plan,
+                new_billing_cycle=billing_cycle,
+            )
+        except StripeServiceError as e:
+            logger.error(f"Failed to update subscription: {e}")
+            return Response(
+                {'detail': 'Failed to update subscription.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Refresh from DB since the service updated the subscription
+        subscription.refresh_from_db()
 
         # Update user's subscription tier
         request.user.subscription_tier = new_plan.tier
@@ -430,18 +408,6 @@ class CreateCheckoutView(APIView):
         success_url = serializer.validated_data.get('success_url')
         cancel_url = serializer.validated_data.get('cancel_url')
 
-        # Get the appropriate Stripe price ID
-        if billing_interval == 'year':
-            price_id = plan.stripe_price_id_yearly
-        else:
-            price_id = plan.stripe_price_id_monthly
-
-        if not price_id:
-            return Response(
-                {'detail': 'Plan pricing not configured for this billing interval.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         # Check if user already has an active subscription
         try:
             existing_subscription = request.user.subscription
@@ -454,25 +420,24 @@ class CreateCheckoutView(APIView):
             pass
 
         # Create checkout session
-        result = stripe_service.create_checkout_session(
-            user=request.user,
-            price_id=price_id,
-            success_url=success_url,
-            cancel_url=cancel_url,
-            metadata={
-                'plan_id': str(plan.id),
-                'billing_interval': billing_interval,
-            }
-        )
-
-        if not result:
-            logger.error(f"Failed to create checkout session for user {request.user.email}")
+        billing_cycle = 'yearly' if billing_interval == 'year' else 'monthly'
+        try:
+            session = stripe_service.create_checkout_session(
+                user=request.user,
+                plan=plan,
+                billing_cycle=billing_cycle,
+                success_url=success_url,
+                cancel_url=cancel_url,
+            )
+        except StripeServiceError as e:
+            logger.error(f"Failed to create checkout session for user {request.user.email}: {e}")
             return Response(
                 {'detail': 'Failed to create checkout session.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        logger.info(f"Checkout session created for user {request.user.email}: {result.get('session_id')}")
+        result = {'session_id': session.id, 'url': session.url}
+        logger.info(f"Checkout session created for user {request.user.email}: {session.id}")
         response_serializer = CheckoutSessionResponseSerializer(result)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
@@ -505,36 +470,20 @@ class CreatePortalView(APIView):
 
         return_url = serializer.validated_data.get('return_url')
 
-        # Get customer ID
-        customer_id = None
         try:
-            customer_id = request.user.subscription.stripe_customer_id
-        except Subscription.DoesNotExist:
-            pass
-
-        if not customer_id and hasattr(request.user, 'stripe_customer_id'):
-            customer_id = request.user.stripe_customer_id
-
-        if not customer_id:
+            portal_session = stripe_service.create_portal_session(
+                user=request.user,
+                return_url=return_url,
+            )
+        except StripeServiceError as e:
+            logger.error(f"Failed to create billing portal for user {request.user.email}: {e}")
             return Response(
-                {'detail': 'No billing information found.'},
+                {'detail': 'Failed to create billing portal session.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        portal_url = stripe_service.create_billing_portal_session(
-            customer_id=customer_id,
-            return_url=return_url,
-        )
-
-        if not portal_url:
-            logger.error(f"Failed to create billing portal for user {request.user.email}")
-            return Response(
-                {'detail': 'Failed to create billing portal session.'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
         logger.info(f"Billing portal session created for user {request.user.email}")
-        response_serializer = PortalResponseSerializer({'url': portal_url})
+        response_serializer = PortalResponseSerializer({'url': portal_session.url})
         return Response(response_serializer.data)
 
 

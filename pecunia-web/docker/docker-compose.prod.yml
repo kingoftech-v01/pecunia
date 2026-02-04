@@ -285,12 +285,12 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: pecunia-flower
-    command: ["celery", "-A", "config", "flower", "--port=5555", "--basic_auth=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin}"]
+    command: ["celery", "-A", "config", "flower", "--port=5555", "--basic_auth=${FLOWER_USER:?FLOWER_USER is required}:${FLOWER_PASSWORD:?FLOWER_PASSWORD is required}"]
     environment:
       <<: *common-env
       FLOWER_UNAUTHENTICATED_API: "false"
-    ports:
-      - "5555:5555"
+    expose:
+      - "5555"
     depends_on:
       - redis
       - celery-worker

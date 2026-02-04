@@ -456,11 +456,19 @@ class GoogleOAuth2Provider(BaseOAuth2Provider):
         access_token = tokens.get('access_token')
         id_token = tokens.get('id_token')
 
-        # Try to decode ID token first (faster, no extra request)
+        # Try to decode and verify ID token first (faster, no extra request)
         if id_token:
             try:
-                # Decode without verification (already verified during token exchange)
-                payload = jwt.decode(id_token, options={"verify_signature": False})
+                # Fetch Google's public keys for JWT verification
+                jwks_client = jwt.PyJWKClient("https://www.googleapis.com/oauth2/v3/certs")
+                signing_key = jwks_client.get_signing_key_from_jwt(id_token)
+                payload = jwt.decode(
+                    id_token,
+                    signing_key.key,
+                    algorithms=["RS256"],
+                    audience=self.client_id,
+                    issuer=["https://accounts.google.com", "accounts.google.com"],
+                )
 
                 return OAuthUserInfo(
                     provider=self.provider_name,
@@ -474,8 +482,8 @@ class GoogleOAuth2Provider(BaseOAuth2Provider):
                     locale=payload.get('locale'),
                     raw_data=payload
                 )
-            except jwt.DecodeError:
-                logger.warning("Failed to decode Google ID token, falling back to userinfo")
+            except (jwt.DecodeError, jwt.InvalidTokenError, jwt.ExpiredSignatureError) as e:
+                logger.warning("Failed to verify Google ID token (%s), falling back to userinfo", e)
 
         # Fall back to userinfo endpoint
         try:
@@ -711,8 +719,16 @@ class AppleOAuth2Provider(BaseOAuth2Provider):
             raise OAuthUserInfoError("Missing ID token from Apple")
 
         try:
-            # Decode ID token
-            payload = jwt.decode(id_token, options={"verify_signature": False})
+            # Verify and decode Apple ID token using Apple's public keys
+            jwks_client = jwt.PyJWKClient("https://appleid.apple.com/auth/keys")
+            signing_key = jwks_client.get_signing_key_from_jwt(id_token)
+            payload = jwt.decode(
+                id_token,
+                signing_key.key,
+                algorithms=["RS256"],
+                audience=self.client_id,
+                issuer="https://appleid.apple.com",
+            )
 
             # Extract email
             email = payload.get('email', '')
@@ -746,9 +762,9 @@ class AppleOAuth2Provider(BaseOAuth2Provider):
                     'user_data': user_data
                 }
             )
-        except jwt.DecodeError as e:
-            logger.error(f"Failed to decode Apple ID token: {e}")
-            raise OAuthUserInfoError(f"Failed to decode Apple ID token: {e}")
+        except (jwt.DecodeError, jwt.InvalidTokenError, jwt.ExpiredSignatureError) as e:
+            logger.error("Failed to verify Apple ID token: %s", e)
+            raise OAuthUserInfoError(f"Failed to verify Apple ID token: {e}")
 
 
 # Provider registry

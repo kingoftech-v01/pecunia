@@ -42,9 +42,7 @@ class StripeService:
         self.cancel_url = getattr(settings, 'STRIPE_CANCEL_URL', '/subscriptions/cancel/')
         self.portal_return_url = getattr(settings, 'STRIPE_PORTAL_RETURN_URL', '/account/billing/')
 
-        if self.api_key:
-            stripe.api_key = self.api_key
-        else:
+        if not self.api_key:
             logger.warning("STRIPE_SECRET_KEY not configured in settings")
 
     def _generate_idempotency_key(self, prefix: str = '') -> str:
@@ -93,7 +91,8 @@ class StripeService:
                 email=user.email,
                 name=getattr(user, 'get_full_name', lambda: user.email)(),
                 metadata=customer_metadata,
-                idempotency_key=self._generate_idempotency_key(f"customer_{user.id}")
+                idempotency_key=self._generate_idempotency_key(f"customer_{user.id}"),
+                api_key=self.api_key,
             )
 
             logger.info(f"Created Stripe customer {customer.id} for user {user.id}")
@@ -120,7 +119,7 @@ class StripeService:
         subscription = getattr(user, 'subscription', None)
         if subscription and subscription.stripe_customer_id:
             try:
-                customer = stripe.Customer.retrieve(subscription.stripe_customer_id)
+                customer = stripe.Customer.retrieve(subscription.stripe_customer_id, api_key=self.api_key)
                 if not customer.get('deleted'):
                     return customer
             except stripe.error.InvalidRequestError:
@@ -129,7 +128,7 @@ class StripeService:
 
         # Search for existing customer by email
         try:
-            customers = stripe.Customer.list(email=user.email, limit=1)
+            customers = stripe.Customer.list(email=user.email, limit=1, api_key=self.api_key)
             if customers.data:
                 return customers.data[0]
         except stripe.error.StripeError:
@@ -150,7 +149,7 @@ class StripeService:
             Updated Stripe Customer object
         """
         try:
-            customer = stripe.Customer.modify(customer_id, **kwargs)
+            customer = stripe.Customer.modify(customer_id, api_key=self.api_key, **kwargs)
             logger.info(f"Updated Stripe customer {customer_id}")
             return customer
         except stripe.error.StripeError as e:
@@ -241,7 +240,7 @@ class StripeService:
         # Add specific promotion code if provided
         if promotion_code:
             try:
-                promo = stripe.PromotionCode.list(code=promotion_code, active=True, limit=1)
+                promo = stripe.PromotionCode.list(code=promotion_code, active=True, limit=1, api_key=self.api_key)
                 if promo.data:
                     session_params['discounts'] = [{'promotion_code': promo.data[0].id}]
                     session_params.pop('allow_promotion_codes', None)
@@ -251,7 +250,8 @@ class StripeService:
         try:
             session = stripe.checkout.Session.create(
                 **session_params,
-                idempotency_key=self._generate_idempotency_key(f"checkout_{user.id}_{plan.id}")
+                idempotency_key=self._generate_idempotency_key(f"checkout_{user.id}_{plan.id}"),
+                api_key=self.api_key,
             )
 
             logger.info(
@@ -302,6 +302,7 @@ class StripeService:
             portal_session = stripe.billing_portal.Session.create(
                 customer=subscription.stripe_customer_id,
                 return_url=final_return_url,
+                api_key=self.api_key,
             )
 
             logger.info(
@@ -345,7 +346,8 @@ class StripeService:
         try:
             if cancel_immediately:
                 stripe_sub = stripe.Subscription.delete(
-                    subscription.stripe_subscription_id
+                    subscription.stripe_subscription_id,
+                    api_key=self.api_key,
                 )
                 subscription.status = Subscription.Status.CANCELED
                 subscription.canceled_at = timezone.now()
@@ -356,7 +358,8 @@ class StripeService:
                     metadata={
                         'cancellation_reason': cancellation_reason or 'User requested',
                         'canceled_by': 'user',
-                    }
+                    },
+                    api_key=self.api_key,
                 )
                 subscription.cancel_at_period_end = True
                 subscription.canceled_at = timezone.now()
@@ -396,6 +399,7 @@ class StripeService:
             stripe_sub = stripe.Subscription.modify(
                 subscription.stripe_subscription_id,
                 cancel_at_period_end=False,
+                api_key=self.api_key,
             )
 
             subscription.cancel_at_period_end = False
@@ -449,7 +453,8 @@ class StripeService:
         try:
             # Get current subscription to find the item ID
             current_stripe_sub = stripe.Subscription.retrieve(
-                subscription.stripe_subscription_id
+                subscription.stripe_subscription_id,
+                api_key=self.api_key,
             )
 
             if not current_stripe_sub.get('items', {}).get('data'):
@@ -472,7 +477,8 @@ class StripeService:
                 },
                 idempotency_key=self._generate_idempotency_key(
                     f"update_sub_{subscription.id}_{new_plan.id}"
-                )
+                ),
+                api_key=self.api_key,
             )
 
             # Update local subscription
@@ -516,7 +522,8 @@ class StripeService:
         try:
             stripe_sub = stripe.Subscription.retrieve(
                 subscription.stripe_subscription_id,
-                expand=['latest_invoice', 'default_payment_method']
+                expand=['latest_invoice', 'default_payment_method'],
+                api_key=self.api_key,
             )
 
             return {
@@ -648,7 +655,7 @@ class StripeService:
             return {'status': 'error', 'reason': f'Plan {plan_id} not found'}
 
         # Retrieve full subscription from Stripe
-        stripe_sub = stripe.Subscription.retrieve(stripe_subscription_id)
+        stripe_sub = stripe.Subscription.retrieve(stripe_subscription_id, api_key=self.api_key)
 
         subscription, created = Subscription.objects.update_or_create(
             user=user,
@@ -832,7 +839,8 @@ class StripeService:
         try:
             invoices = stripe.Invoice.list(
                 customer=customer_id,
-                limit=limit
+                limit=limit,
+                api_key=self.api_key,
             )
             return list(invoices.data)
         except stripe.error.StripeError as e:
@@ -854,7 +862,8 @@ class StripeService:
 
         try:
             invoice = stripe.Invoice.upcoming(
-                customer=subscription.stripe_customer_id
+                customer=subscription.stripe_customer_id,
+                api_key=self.api_key,
             )
             return invoice
         except stripe.error.InvalidRequestError:
@@ -879,7 +888,8 @@ class StripeService:
 
         try:
             stripe_sub = stripe.Subscription.retrieve(
-                subscription.stripe_subscription_id
+                subscription.stripe_subscription_id,
+                api_key=self.api_key,
             )
 
             subscription.status = stripe_sub.status
@@ -904,6 +914,44 @@ class StripeService:
         except stripe.error.StripeError as e:
             logger.error(f"Failed to sync subscription from Stripe: {e}")
             return False
+
+    def get_customer(self, customer_id: str) -> dict | None:
+        """
+        Retrieve a Stripe customer by ID.
+
+        Args:
+            customer_id: Stripe customer ID
+
+        Returns:
+            Stripe Customer object or None
+        """
+        try:
+            return stripe.Customer.retrieve(customer_id, api_key=self.api_key)
+        except stripe.error.StripeError as e:
+            logger.error(f"Failed to retrieve customer {customer_id}: {e}")
+            return None
+
+    def get_payment_methods(self, customer_id: str, pm_type: str = 'card') -> list:
+        """
+        Get payment methods for a customer.
+
+        Args:
+            customer_id: Stripe customer ID
+            pm_type: Payment method type (default: 'card')
+
+        Returns:
+            List of payment method objects
+        """
+        try:
+            methods = stripe.PaymentMethod.list(
+                customer=customer_id,
+                type=pm_type,
+                api_key=self.api_key,
+            )
+            return list(methods.data)
+        except stripe.error.StripeError as e:
+            logger.error(f"Failed to get payment methods for {customer_id}: {e}")
+            return []
 
 
 # Singleton instance for convenience

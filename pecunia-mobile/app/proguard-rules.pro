@@ -51,3 +51,9 @@
 # ML Kit
 -keep class com.google.mlkit.** { *; }
 -dontwarn com.google.mlkit.**
+
+# Strip debug and verbose log calls in release builds
+-assumenosideeffects class android.util.Log {
+    public static int d(...);
+    public static int v(...);
+}

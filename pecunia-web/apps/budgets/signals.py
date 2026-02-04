@@ -13,7 +13,7 @@ from django.db.models import Sum
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 
-from .models import Budget, BudgetItem, BudgetAlert
+from .models import Budget, BudgetItem
 
 logger = logging.getLogger(__name__)
 
@@ -80,30 +80,31 @@ def check_threshold_before_save(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=BudgetItem)
-def create_budget_alert_on_threshold(sender, instance, created, **kwargs):
+def log_budget_threshold_exceeded(sender, instance, created, **kwargs):
     """
-    Create a budget alert when spending reaches or exceeds threshold.
+    Log when spending reaches or exceeds budget threshold.
 
-    This signal monitors budget item spending and automatically creates
-    appropriate alerts based on the percentage used.
+    This signal monitors budget item spending and logs warnings
+    when the spending percentage exceeds the budget's alert threshold.
     """
-    if not instance.is_alert_enabled:
-        return
-
     # Skip if spent_amount hasn't changed (except for new items)
     old_spent = getattr(instance, '_old_spent_amount', None)
     if not created and old_spent is not None and old_spent == instance.spent_amount:
         return
 
     try:
-        alert = BudgetAlert.create_alert_for_item(instance)
-        if alert:
-            logger.info(
-                f"Created {alert.alert_type} alert for budget item "
-                f"'{instance.category.name}' at {alert.percentage_reached}%"
-            )
+        if instance.planned_amount and instance.planned_amount > 0:
+            percentage = (instance.spent_amount / instance.planned_amount) * 100
+            budget = instance.budget
+            if percentage >= budget.alert_threshold:
+                category_name = instance.category.name if instance.category else 'Uncategorized'
+                logger.warning(
+                    f"Budget threshold reached for item "
+                    f"'{category_name}' at {percentage:.1f}% "
+                    f"in budget '{budget.name}'"
+                )
     except Exception as e:
-        logger.error(f"Error creating budget alert: {e}")
+        logger.error(f"Error checking budget threshold: {e}")
 
 
 def update_spent_amount_for_transaction(transaction_instance):
@@ -120,16 +121,15 @@ def update_spent_amount_for_transaction(transaction_instance):
 
     try:
         # Only process expense transactions
-        if transaction_instance.transaction_type != 'expense':
+        if transaction_instance.type != 'expense':
             return
 
         # Find relevant budget items for this transaction
         budget_items = BudgetItem.objects.filter(
             budget__user=transaction_instance.user,
             budget__is_active=True,
-            budget__is_deleted=False,
-            budget__start_date__lte=transaction_instance.date,
-            budget__end_date__gte=transaction_instance.date,
+            budget__start_date__lte=transaction_instance.transaction_date,
+            budget__end_date__gte=transaction_instance.transaction_date,
             category=transaction_instance.category
         ).select_related('budget', 'category')
 
@@ -141,10 +141,9 @@ def update_spent_amount_for_transaction(transaction_instance):
             total_spent = Transaction.objects.filter(
                 user=budget_item.budget.user,
                 category=budget_item.category,
-                date__gte=budget_item.budget.start_date,
-                date__lte=budget_item.budget.end_date,
-                transaction_type='expense',
-                is_deleted=False
+                transaction_date__gte=budget_item.budget.start_date,
+                transaction_date__lte=budget_item.budget.end_date,
+                type='expense',
             ).aggregate(
                 total=Sum('amount')
             )['total'] or Decimal('0.00')
@@ -177,7 +176,6 @@ def recalculate_all_budget_items(user=None, budget=None):
 
     queryset = BudgetItem.objects.filter(
         budget__is_active=True,
-        budget__is_deleted=False
     ).select_related('budget', 'category')
 
     if user:
@@ -192,10 +190,9 @@ def recalculate_all_budget_items(user=None, budget=None):
         total_spent = Transaction.objects.filter(
             user=budget_item.budget.user,
             category=budget_item.category,
-            date__gte=budget_item.budget.start_date,
-            date__lte=budget_item.budget.end_date,
-            transaction_type='expense',
-            is_deleted=False
+            transaction_date__gte=budget_item.budget.start_date,
+            transaction_date__lte=budget_item.budget.end_date,
+            type='expense',
         ).aggregate(
             total=Sum('amount')
         )['total'] or Decimal('0.00')

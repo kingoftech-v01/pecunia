@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
 
         // Process initial deep link
         val initialDeepLink = intent?.data?.toString()
-        Timber.d("Initial deep link: $initialDeepLink")
+        Timber.d("Deep link received")
 
         setContent {
             val navController = rememberNavController()
@@ -111,7 +111,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         // Handle deep links when app is already running
         intent.data?.let { uri ->
-            Timber.d("New intent deep link: $uri")
+            Timber.d("New intent deep link received")
             handleDeepLink(uri.toString())
         }
     }
@@ -120,16 +120,19 @@ class MainActivity : ComponentActivity() {
      * Determine the start destination based on user authentication state.
      */
     private fun determineStartDestination(): String {
-        // TODO: Check if user is authenticated
-        // For now, always start at the main graph
-        return Route.Main.Graph.route
+        // Check if user is authenticated; if not, redirect to login
+        return if (appConfig.isAuthenticated()) {
+            Route.Main.Graph.route
+        } else {
+            Route.Auth.Login.route
+        }
     }
 
     /**
      * Handle deep link navigation.
      */
     private fun handleDeepLink(deepLink: String) {
-        Timber.d("Handling deep link: $deepLink")
+        Timber.d("Handling deep link")
         // Deep link handling is done in the NavHost
     }
 }
@@ -209,7 +212,18 @@ private fun HandleDeepLinks(
 ) {
     LaunchedEffect(initialDeepLink) {
         initialDeepLink?.let { deepLink ->
-            Timber.d("Processing deep link: $deepLink")
+            Timber.d("Processing deep link")
+
+            // Require authentication for non-auth deep links
+            val isAuthRoute = deepLink.contains("auth/login") || deepLink.contains("auth/register")
+            if (!isAuthRoute) {
+                // Check if authenticated; if not, redirect to login instead
+                // The deep link will not be processed for unauthenticated users
+                val currentRoute = navController.currentDestination?.route
+                if (currentRoute == Route.Auth.Login.route || currentRoute == Route.Auth.Register.route) {
+                    return@let
+                }
+            }
 
             // Parse deep link and navigate
             when {

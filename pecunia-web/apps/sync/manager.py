@@ -11,6 +11,7 @@ from django.apps import apps
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
 
+from django.core.exceptions import ValidationError
 from .models import SyncLog, SyncQueue, SyncConflict
 
 logger = logging.getLogger(__name__)
@@ -127,7 +128,7 @@ class SyncManager:
                 logger.error(f"Error processing change: {e}")
                 results['failed'].append({
                     'change': change,
-                    'error': str(e),
+                    'error': 'Failed to process change.',
                 })
                 sync_log.items_failed += 1
 
@@ -274,9 +275,23 @@ class SyncManager:
             }
 
     def _create_object(self, Model, data: Dict[str, Any]):
-        """Create a new object from sync data."""
-        data['user'] = self.user
-        return Model.objects.create(**data)
+        """Create a new object from sync data with field allowlist."""
+        # Determine allowed fields from SYNCABLE_MODELS config
+        model_label = f"{Model._meta.app_label}.{Model._meta.object_name}"
+        model_config = self.SYNCABLE_MODELS.get(model_label, {})
+        allowed_fields = set(model_config.get('sync_fields', []))
+
+        # Filter data to only allowed fields
+        filtered_data = {
+            k: v for k, v in data.items()
+            if k in allowed_fields
+        }
+        filtered_data['user'] = self.user
+
+        instance = Model(**filtered_data)
+        instance.full_clean()
+        instance.save()
+        return instance
 
     def _update_object(
         self,
@@ -285,13 +300,14 @@ class SyncManager:
         data: Dict[str, Any],
         allowed_fields: List[str]
     ):
-        """Update an existing object with sync data."""
+        """Update an existing object with sync data after validation."""
         instance = Model.objects.get(id=object_id, user=self.user)
 
         for field in allowed_fields:
             if field in data:
                 setattr(instance, field, data[field])
 
+        instance.full_clean()
         instance.save()
         return instance
 
@@ -299,10 +315,27 @@ class SyncManager:
         """Delete an object."""
         Model.objects.filter(id=object_id, user=self.user).delete()
 
+    # Internal fields that should never be exposed via sync
+    EXCLUDED_SERIALIZATION_FIELDS = {
+        'user', 'password', 'last_login', 'is_superuser', 'is_staff',
+        'ai_category_suggestion', 'ai_confidence',
+    }
+
     def _serialize_instance(self, instance) -> Dict[str, Any]:
-        """Serialize a model instance to a dictionary."""
+        """Serialize a model instance to a dictionary, excluding internal fields."""
+        # Get allowed fields from model config
+        model_label = f"{instance._meta.app_label}.{instance._meta.object_name}"
+        model_config = self.SYNCABLE_MODELS.get(model_label, {})
+        allowed_fields = set(model_config.get('sync_fields', []))
+        # Always include id and timestamps for sync
+        allowed_fields.update({'id', 'created_at', 'updated_at'})
+
         data = {}
         for field in instance._meta.fields:
+            if field.name in self.EXCLUDED_SERIALIZATION_FIELDS:
+                continue
+            if field.name not in allowed_fields:
+                continue
             value = getattr(instance, field.name)
             if hasattr(value, 'isoformat'):
                 value = value.isoformat()

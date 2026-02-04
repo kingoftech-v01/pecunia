@@ -12,3 +12,6 @@ elif environment == 'staging':
     from .staging import *
 else:
     from .development import *
+
+# Import security settings (must come after environment settings to override)
+from .security import *  # noqa: F401, F403

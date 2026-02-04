@@ -5,15 +5,18 @@ Uses pyotp for TOTP generation and verification.
 
 import base64
 import io
+import logging
 import secrets
 from typing import Optional, Tuple
 
 import pyotp
 import qrcode
 from django.conf import settings
-from django.db import models
+from django.db import models, IntegrityError, transaction
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+
+logger = logging.getLogger(__name__)
 
 
 class TOTPDevice(models.Model):
@@ -141,20 +144,27 @@ class TOTPService:
         current_time = timezone.now().timestamp()
         current_counter = int(current_time) // cls.INTERVAL
 
-        # Check for replay attack
-        if device and current_counter <= device.last_used_counter:
-            return False
+        if device:
+            # Use atomic transaction with select_for_update for replay prevention
+            with transaction.atomic():
+                locked_device = TOTPDevice.objects.select_for_update().get(pk=device.pk)
 
-        # Verify with valid window (allows for time drift)
-        is_valid = totp.verify(code, valid_window=cls.VALID_WINDOW)
+                # Check for replay attack
+                if current_counter <= locked_device.last_used_counter:
+                    return False
 
-        if is_valid and device:
-            # Update device to prevent replay
-            device.last_used_at = timezone.now()
-            device.last_used_counter = current_counter
-            device.save(update_fields=['last_used_at', 'last_used_counter'])
+                # Verify with valid window (allows for time drift)
+                is_valid = totp.verify(code, valid_window=cls.VALID_WINDOW)
 
-        return is_valid
+                if is_valid:
+                    locked_device.last_used_at = timezone.now()
+                    locked_device.last_used_counter = current_counter
+                    locked_device.save(update_fields=['last_used_at', 'last_used_counter'])
+
+                return is_valid
+        else:
+            # No device for replay tracking, just verify
+            return totp.verify(code, valid_window=cls.VALID_WINDOW)
 
     @classmethod
     def get_provisioning_uri(cls, secret: str, email: str) -> str:
@@ -232,6 +242,10 @@ class TOTPService:
         Returns:
             Tuple[TOTPDevice, str]: The device and QR code data URI
         """
+        # Check if user already has a confirmed device
+        if TOTPDevice.objects.filter(user=user, confirmed=True).exists():
+            raise IntegrityError("User already has 2FA enabled. Disable it first before setting up a new device.")
+
         # Remove any existing unconfirmed device
         TOTPDevice.objects.filter(user=user, confirmed=False).delete()
 
@@ -239,11 +253,15 @@ class TOTPService:
         secret = cls.generate_secret()
 
         # Create device
-        device = TOTPDevice.objects.create(
-            user=user,
-            secret=secret,
-            confirmed=False
-        )
+        try:
+            device = TOTPDevice.objects.create(
+                user=user,
+                secret=secret,
+                confirmed=False
+            )
+        except IntegrityError:
+            logger.warning("Attempted to create duplicate TOTP device for user %s", user.pk)
+            raise
 
         # Generate QR code
         qr_code = cls.get_qr_code(secret, user.email)

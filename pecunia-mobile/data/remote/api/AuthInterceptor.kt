@@ -63,9 +63,55 @@ class AuthInterceptor @Inject constructor(
                     )
                 }
 
-                // Token refresh would be handled here
-                // For now, return the original 401 response
-                return chain.proceed(request)
+                // Attempt to refresh the token using the refresh token
+                val refreshToken = getRefreshToken()
+                if (refreshToken.isNullOrBlank()) {
+                    clearTokens()
+                    return chain.proceed(request)
+                }
+
+                return try {
+                    val refreshRequest = originalRequest.newBuilder()
+                        .url(originalRequest.url.newBuilder()
+                            .encodedPath("/auth/refresh-token")
+                            .build())
+                        .post(okhttp3.RequestBody.create(
+                            okhttp3.MediaType.parse("application/json"),
+                            """{"refresh_token":"$refreshToken"}"""
+                        ))
+                        .build()
+
+                    val refreshResponse = chain.proceed(refreshRequest)
+                    if (refreshResponse.isSuccessful) {
+                        val responseBody = refreshResponse.body?.string()
+                        val gson = com.google.gson.Gson()
+                        val tokenResponse = gson.fromJson(responseBody, TokenRefreshResponse::class.java)
+                        if (tokenResponse != null) {
+                            saveTokens(
+                                tokenResponse.accessToken,
+                                tokenResponse.refreshToken,
+                                tokenResponse.expiresAt
+                            )
+                            refreshResponse.close()
+                            // Retry original request with new token
+                            chain.proceed(
+                                originalRequest.newBuilder()
+                                    .header(HEADER_CONTENT_TYPE, CONTENT_TYPE_JSON)
+                                    .header(HEADER_AUTHORIZATION, "$BEARER_PREFIX${tokenResponse.accessToken}")
+                                    .build()
+                            )
+                        } else {
+                            clearTokens()
+                            refreshResponse
+                        }
+                    } else {
+                        clearTokens()
+                        refreshResponse
+                    }
+                } catch (e: Exception) {
+                    clearTokens()
+                    chain.proceed(request)
+                }
             }
         }
 
@@ -90,7 +136,7 @@ class AuthInterceptor @Inject constructor(
     /**
      * Get the current access token from secure storage.
      */
-    fun getAccessToken(): String? {
+    internal fun getAccessToken(): String? {
         return sharedPreferences.getString(KEY_ACCESS_TOKEN, null)
     }
 
@@ -108,12 +154,15 @@ class AuthInterceptor @Inject constructor(
     /**
      * Get the refresh token from secure storage.
      */
-    fun getRefreshToken(): String? {
+    internal fun getRefreshToken(): String? {
         return sharedPreferences.getString(KEY_REFRESH_TOKEN, null)
     }
 
     /**
      * Check if the access token is expired.
+     * Note: This relies on the client device clock. If the client clock is skewed,
+     * token expiry checks may be inaccurate. The server-side 401 response handling
+     * in intercept() provides a fallback for clock skew issues.
      */
     fun isTokenExpired(): Boolean {
         val expiryTime = sharedPreferences.getLong(KEY_TOKEN_EXPIRY, 0)
@@ -137,4 +186,16 @@ class AuthInterceptor @Inject constructor(
     fun isAuthenticated(): Boolean {
         return !getAccessToken().isNullOrBlank() && !isTokenExpired()
     }
+
+    /**
+     * Data class for token refresh response deserialization.
+     */
+    private data class TokenRefreshResponse(
+        @com.google.gson.annotations.SerializedName("access_token")
+        val accessToken: String,
+        @com.google.gson.annotations.SerializedName("refresh_token")
+        val refreshToken: String,
+        @com.google.gson.annotations.SerializedName("expires_at")
+        val expiresAt: Long
+    )
 }

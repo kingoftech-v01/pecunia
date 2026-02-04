@@ -350,7 +350,7 @@ Respond with a JSON array containing an object for each transaction with:
         cache_key = self._get_cache_key(
             "suggestions",
             user.id,
-            hashlib.md5(description.encode()).hexdigest()
+            hashlib.sha256(description.encode()).hexdigest()
         )
 
         cached = cache.get(cache_key)
@@ -600,7 +600,7 @@ Respond with a JSON array of the top {limit} category suggestions, each with:
                 patterns_key = self._get_cache_key("learned_patterns", user.id)
                 existing = cache.get(patterns_key, {})
 
-                pattern_id = hashlib.md5(
+                pattern_id = hashlib.sha256(
                     "|".join(sorted(patterns["keywords"])).encode()
                 ).hexdigest()[:16]
 
@@ -634,7 +634,7 @@ Respond with a JSON array of the top {limit} category suggestions, each with:
     ) -> str:
         """Generate a unique cache key for categorization."""
         content = f"{description}|{merchant or ''}|{transaction_type}"
-        content_hash = hashlib.md5(content.encode()).hexdigest()
+        content_hash = hashlib.sha256(content.encode()).hexdigest()
         return self._get_cache_key("categorize", user_id, content_hash)
 
     def _invalidate_categorization_cache(

@@ -7,12 +7,13 @@
         </trust-anchors>
     </base-config>
 
-    <!-- Development domains (debug only) -->
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">localhost</domain>
-        <domain includeSubdomains="true">10.0.2.2</domain>
-        <domain includeSubdomains="true">api-dev.pecunia.com</domain>
-    </domain-config>
+    <!-- Development domains - cleartext only allowed in debug builds via debug-overrides -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
 
     <!-- Production domains with certificate pinning -->
     <domain-config cleartextTrafficPermitted="false">
@@ -22,11 +23,10 @@
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
-        <!--
-        TODO: Add certificate pinning for production
-        <pin-set expiration="2025-12-31">
-            <pin digest="SHA-256">YOUR_CERTIFICATE_PIN_HERE</pin>
+        <!-- TODO: Replace placeholder pins with real certificate pins before production release -->
+        <pin-set expiration="2027-01-01">
+            <pin digest="SHA-256">YOUR_PRIMARY_CERTIFICATE_PIN_HERE</pin>
+            <pin digest="SHA-256">YOUR_BACKUP_CERTIFICATE_PIN_HERE</pin>
         </pin-set>
-        -->
     </domain-config>
 </network-security-config>

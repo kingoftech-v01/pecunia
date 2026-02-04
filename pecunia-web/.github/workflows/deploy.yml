@@ -21,11 +21,8 @@ on:
         options:
           - staging
           - production
-      skip_tests:
-        description: 'Skip tests (emergency deploy)'
-        required: false
-        default: false
-        type: boolean
+      # WARNING: skip_tests removed to prevent deploying untested code to production.
+      # All deployments must pass CI checks before being deployed.
 
 env:
   DOCKER_BUILDKIT: 1
@@ -66,7 +63,7 @@ jobs:
     name: CI Checks
     runs-on: ubuntu-latest
     needs: [setup]
-    if: ${{ github.event.inputs.skip_tests != 'true' }}
+    if: always()
     services:
       postgres:
         image: postgres:16-alpine
@@ -140,7 +137,7 @@ jobs:
     name: Build Images
     runs-on: ubuntu-latest
     needs: [setup, ci-checks]
-    if: always() && (needs.ci-checks.result == 'success' || needs.ci-checks.result == 'skipped')
+    if: always() && needs.ci-checks.result == 'success'
     permissions:
       contents: read
       packages: write
@@ -225,7 +222,7 @@ jobs:
           REGISTRY: ${{ env.REGISTRY }}
           IMAGE_NAME: ${{ env.IMAGE_NAME }}
         run: |
-          ssh $USER@$HOST << 'ENDSSH'
+          ssh $USER@$HOST << ENDSSH
             set -e
             cd $DEPLOY_PATH
 
@@ -241,7 +238,7 @@ jobs:
 
             # Create backup of current state
             echo "Creating backup..."
-            docker-compose -f docker-compose.prod.yml exec -T db pg_dump -U pecunia pecunia > backup_$(date +%Y%m%d_%H%M%S).sql || true
+            docker-compose -f docker-compose.prod.yml exec -T db pg_dump -U pecunia pecunia > backup_\$(date +%Y%m%d_%H%M%S).sql || true
 
             # Deploy with zero-downtime
             echo "Deploying new version..."
@@ -257,7 +254,7 @@ jobs:
             # Health check
             echo "Running health check..."
             sleep 10
-            curl -sf http://localhost/api/v1/health/ || exit 1
+            curl -sf https://localhost/api/v1/health/ || exit 1
 
             echo "Deployment successful!"
           ENDSSH
@@ -308,7 +305,7 @@ jobs:
           REGISTRY: ${{ env.REGISTRY }}
           IMAGE_NAME: ${{ env.IMAGE_NAME }}
         run: |
-          ssh $USER@$HOST << 'ENDSSH'
+          ssh $USER@$HOST << ENDSSH
             set -e
             cd $DEPLOY_PATH
 
@@ -324,7 +321,7 @@ jobs:
 
             # Create backup before deployment
             echo "Creating database backup..."
-            docker-compose -f docker-compose.prod.yml exec -T db pg_dump -U pecunia pecunia > backup_pre_deploy_$(date +%Y%m%d_%H%M%S).sql
+            docker-compose -f docker-compose.prod.yml exec -T db pg_dump -U pecunia pecunia > backup_pre_deploy_\$(date +%Y%m%d_%H%M%S).sql
 
             # Blue-green deployment
             echo "Starting blue-green deployment..."
@@ -341,7 +338,7 @@ jobs:
             docker-compose -f docker-compose.prod.yml exec -T web python manage.py migrate --noinput
 
             # Verify new deployment
-            curl -sf http://localhost:8000/api/v1/health/ || { echo "Health check failed"; exit 1; }
+            curl -sf https://localhost/api/v1/health/ || { echo "Health check failed"; exit 1; }
 
             # Scale down old containers
             docker-compose -f docker-compose.prod.yml up -d --no-deps --scale web=1 web
@@ -365,7 +362,7 @@ jobs:
 
       - name: Create GitHub Release
         if: success()
-        uses: actions/create-release@v1
+        uses: actions/create-release@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -393,7 +390,7 @@ jobs:
           DEPLOY_PATH: /opt/pecunia
         run: |
           echo "Deployment failed, initiating rollback..."
-          ssh $USER@$HOST << 'ENDSSH'
+          ssh $USER@$HOST << ENDSSH
             cd $DEPLOY_PATH
             # Rollback to previous version
             docker-compose -f docker-compose.prod.yml up -d --no-deps web celery-worker celery-beat

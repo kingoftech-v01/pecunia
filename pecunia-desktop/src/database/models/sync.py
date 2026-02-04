@@ -256,12 +256,20 @@ class SyncRecord(Base):
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
         }
 
+    # Allowlist of fields that can be deserialized from external data
+    _DESERIALIZABLE_FIELDS = frozenset({
+        'id', 'entity_type', 'entity_id', 'operation', 'status',
+        'payload', 'error_message', 'retry_count', 'priority',
+        'local_version', 'remote_version', 'batch_id',
+        'created_at', 'updated_at', 'started_at', 'completed_at',
+    })
+
     @classmethod
     def from_dict(cls, data: dict) -> "SyncRecord":
         """Create a SyncRecord instance from a dictionary."""
         record = cls()
         for key, value in data.items():
-            if hasattr(record, key):
+            if key in cls._DESERIALIZABLE_FIELDS:
                 if key == 'operation' and isinstance(value, str):
                     value = SyncOperation(value)
                 elif key == 'status' and isinstance(value, str):

@@ -66,6 +66,24 @@ class TransactionSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
 
+    def validate_bank_account(self, value):
+        """Ensure bank_account belongs to the requesting user."""
+        request = self.context.get('request')
+        if request and value and value.user != request.user:
+            raise serializers.ValidationError(
+                "You do not have permission to use this bank account."
+            )
+        return value
+
+    def validate_category(self, value):
+        """Ensure category belongs to the requesting user."""
+        request = self.context.get('request')
+        if request and value and value.user != request.user:
+            raise serializers.ValidationError(
+                "You do not have permission to use this category."
+            )
+        return value
+
     def create(self, validated_data):
         """Create transaction with current user."""
         validated_data['user'] = self.context['request'].user

@@ -7,6 +7,7 @@ filtering, categorization, and import/export functionality.
 
 import logging
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
 from enum import Enum
@@ -40,7 +41,7 @@ class SortOrder(Enum):
 class Transaction:
     """Represents a financial transaction."""
     id: str
-    amount: float
+    amount: Decimal
     description: str
     date: str
     type: str
@@ -60,7 +61,7 @@ class Transaction:
         """Create Transaction from dictionary."""
         return cls(
             id=data.get('id', ''),
-            amount=float(data.get('amount', 0)),
+            amount=Decimal(str(data.get('amount', 0))),
             description=data.get('description', ''),
             date=data.get('date', ''),
             type=data.get('type', TransactionType.EXPENSE),
@@ -97,7 +98,7 @@ class TransactionSummary:
     """Summary statistics for transactions."""
     total_income: float = 0.0
     total_expenses: float = 0.0
-    net_amount: float = 0.0
+    net_amount: Decimal = 0.0
     transaction_count: int = 0
     categories: Dict[str, float] = field(default_factory=dict)
     period_start: Optional[str] = None
@@ -748,7 +749,7 @@ class RecurrenceFrequency(Enum):
 class RecurringTransaction:
     """Represents a recurring transaction template."""
     id: str
-    amount: float
+    amount: Decimal
     description: str
     type: str
     frequency: str
@@ -768,7 +769,7 @@ class RecurringTransaction:
         """Create RecurringTransaction from dictionary."""
         return cls(
             id=data.get('id', ''),
-            amount=float(data.get('amount', 0)),
+            amount=Decimal(str(data.get('amount', 0))),
             description=data.get('description', ''),
             type=data.get('type', TransactionType.EXPENSE),
             frequency=data.get('frequency', RecurrenceFrequency.MONTHLY.value),
@@ -804,7 +805,7 @@ class RecurringTransaction:
 @dataclass
 class RecurringTransactionCreate:
     """Data for creating a new recurring transaction."""
-    amount: float
+    amount: Decimal
     description: str
     type: str
     frequency: str

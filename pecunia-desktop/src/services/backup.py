@@ -385,6 +385,13 @@ class BackupService:
                 temp_path = Path(temp_dir)
 
                 with zipfile.ZipFile(backup_path, 'r') as zf:
+                    # Validate entries to prevent Zip Slip (path traversal)
+                    for member in zf.namelist():
+                        member_path = (temp_path / member).resolve()
+                        if not str(member_path).startswith(str(temp_path.resolve())):
+                            raise RestoreError(
+                                f"Zip Slip detected: '{member}' would extract outside target directory"
+                            )
                     zf.extractall(temp_path)
 
                 # Verify checksums if requested
@@ -411,6 +418,7 @@ class BackupService:
                 source_db = temp_path / self.DATABASE_FILENAME
                 if source_db.exists():
                     # Create backup of current database
+                    backup_current = None
                     if self._database_path.exists():
                         backup_current = self._database_path.with_suffix('.db.old')
                         shutil.copy2(self._database_path, backup_current)
@@ -419,7 +427,7 @@ class BackupService:
                     shutil.copy2(source_db, self._database_path)
 
                     # Remove old backup
-                    if backup_current.exists():
+                    if backup_current is not None and backup_current.exists():
                         backup_current.unlink()
 
                 self._report_progress(80, 100, "Restoring settings...")
@@ -512,6 +520,14 @@ class BackupService:
 
                 # Extract to temp and verify checksums
                 with tempfile.TemporaryDirectory() as temp_dir:
+                    # Validate entries to prevent Zip Slip (path traversal)
+                    temp_dir_resolved = Path(temp_dir).resolve()
+                    for member in zf.namelist():
+                        member_path = (Path(temp_dir) / member).resolve()
+                        if not str(member_path).startswith(str(temp_dir_resolved)):
+                            return False, {**details, 'errors': details['errors'] + [
+                                f"Zip Slip detected: '{member}' would extract outside target directory"
+                            ]}
                     zf.extractall(temp_dir)
                     temp_path = Path(temp_dir)
 

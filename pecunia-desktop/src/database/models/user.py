@@ -100,7 +100,7 @@ class User(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<User(id={self.id}, email={self.email})>"
+        return f"<User(id={self.id})>"
 
     @property
     def full_name(self) -> str:
@@ -165,12 +165,19 @@ class User(Base):
             "sync_version": self.sync_version,
         }
 
+    # Allowlist of fields that can be deserialized from external data
+    _DESERIALIZABLE_FIELDS = frozenset({
+        'id', 'server_id', 'email', 'first_name', 'last_name',
+        'subscription_tier', 'preferred_currency', 'is_active',
+        'created_at', 'updated_at', 'last_sync_at', 'sync_version',
+    })
+
     @classmethod
     def from_dict(cls, data: dict) -> "User":
         """Create a User instance from a dictionary."""
         user = cls()
         for key, value in data.items():
-            if hasattr(user, key) and key not in ('transactions', 'budgets'):
+            if key in cls._DESERIALIZABLE_FIELDS:
                 if key.endswith('_at') and value and isinstance(value, str):
                     value = datetime.fromisoformat(value)
                 setattr(user, key, value)

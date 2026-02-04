@@ -54,6 +54,18 @@ data class UserPreferences(
     val lastSyncTimestamp: Long = 0L,
     val onboardingCompleted: Boolean = false
 ) {
+    /**
+     * Override toString to prevent sensitive token data from leaking to logs.
+     */
+    override fun toString(): String {
+        return "UserPreferences(isLoggedIn=$isLoggedIn, " +
+            "accessToken=${if (accessToken.isNotBlank()) "[REDACTED]" else ""}, " +
+            "refreshToken=${if (refreshToken.isNotBlank()) "[REDACTED]" else ""}, " +
+            "userId=$userId, email=$email, theme=$theme, language=$language, " +
+            "notificationsEnabled=$notificationsEnabled, biometricEnabled=$biometricEnabled, " +
+            "lastSyncTimestamp=$lastSyncTimestamp, onboardingCompleted=$onboardingCompleted)"
+    }
+
     companion object {
         /**
          * Default preferences for a new/unauthenticated user
