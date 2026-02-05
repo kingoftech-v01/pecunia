@@ -35,7 +35,12 @@ class TestAnomalyDetector:
     @override_settings(ANTHROPIC_API_KEY='test-key')
     @patch('apps.ai.services.base.anthropic.Anthropic')
     def test_detect_unusual_spending_no_history(self, mock_anthropic_cls, user, transaction):
+        from django.conf import settings
         from apps.ai.services.anomaly_detection import AnomalyDetector
+
+        # Skip if using SQLite (uses PostgreSQL-specific features)
+        if 'sqlite' in settings.DATABASES['default']['ENGINE']:
+            pytest.skip("Test requires PostgreSQL")
 
         service = AnomalyDetector()
         result = service.detect_unusual_spending(
@@ -154,7 +159,12 @@ class TestAnomalyDetector:
     @override_settings(ANTHROPIC_API_KEY='test-key')
     @patch('apps.ai.services.base.anthropic.Anthropic')
     def test_get_spending_patterns(self, mock_anthropic_cls, user, transaction):
+        from django.conf import settings
         from apps.ai.services.anomaly_detection import AnomalyDetector
+
+        # Skip if using SQLite (uses PostgreSQL-specific features)
+        if 'sqlite' in settings.DATABASES['default']['ENGINE']:
+            pytest.skip("Test requires PostgreSQL")
 
         service = AnomalyDetector()
         patterns = service.get_spending_patterns(user=user)
