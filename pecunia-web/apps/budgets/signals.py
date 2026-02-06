@@ -74,6 +74,7 @@ def check_threshold_before_save(sender, instance, **kwargs):
     we capture the old value in pre_save and attach it to the instance. The
     post_save handler then compares old vs. new to avoid false threshold alerts.
     """
+    # Capture old value here because post_save only sees new values.
     if instance.pk:
         try:
             old_instance = BudgetItem.objects.get(pk=instance.pk)

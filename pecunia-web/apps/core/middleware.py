@@ -193,20 +193,14 @@ class RateLimitMiddleware(MiddlewareMixin):
         window = config['window']
         max_requests = config['requests']
 
-        # SLIDING WINDOW RATE LIMITING: Unlike fixed windows (which allow burst
-        # attacks at window boundaries), we weight the previous window's count
-        # by how much time remains. Example with 60s window, 100 req limit:
-        #   - At t=90s (50% into window 1): prev_window=80, current=30
-        #   - Weighted = 80 * 0.5 + 30 = 70 requests (allowed)
-        #   - This smooths the limit across window boundaries.
+        # Sliding window: weight previous window by remaining time to prevent
+        # burst attacks at window boundaries (unlike fixed window counters).
         window_key = f"{key}:{int(now // window)}"
         previous_window_key = f"{key}:{int(now // window) - 1}"
 
         current_count = cache.get(window_key, 0)
         previous_count = cache.get(previous_window_key, 0)
 
-        # window_progress is 0.0 at window start, approaches 1.0 at end.
-        # We weight the previous window inversely: more weight early, less late.
         window_progress = (now % window) / window
         weighted_count = previous_count * (1 - window_progress) + current_count
 
@@ -216,7 +210,7 @@ class RateLimitMiddleware(MiddlewareMixin):
         if weighted_count >= max_requests:
             return False, 0, reset_time
 
-        # Store for 2x window duration so previous window data survives.
+        # 2x timeout ensures previous window data survives for weighting.
         cache.set(window_key, current_count + 1, timeout=window * 2)
 
         return True, remaining, reset_time

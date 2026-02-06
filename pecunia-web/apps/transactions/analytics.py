@@ -409,12 +409,7 @@ class TransactionAnalytics:
 
         queryset = self._apply_period_filter(self._base_queryset, analytics_period)
 
-        # SIGNED AMOUNT CALCULATION: All amounts are stored as positive values
-        # in the database. To calculate running balance, we need to:
-        #   - Add income (positive effect on balance)
-        #   - Subtract expenses (negative effect on balance)
-        # Using Case/When in the annotation lets the database do this in one
-        # query instead of fetching all rows and processing in Python.
+        # Amounts stored positive; Case/When signs them in DB (avoids Python loop).
         daily_totals = queryset.annotate(
             signed_amount_calc=Case(
                 When(type='expense', then=-F('amount')),  # Expenses reduce balance

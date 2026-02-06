@@ -952,15 +952,7 @@ class StripeService:
         return datetime.fromtimestamp(timestamp, tz=dt_timezone.utc)
 
     def amount_to_decimal(self, amount: int, currency: str = 'eur') -> Decimal:
-        """Convert a Stripe amount to a Decimal, handling zero-decimal currencies.
-
-        Stripe represents most amounts in the smallest currency unit (e.g., cents
-        for EUR/USD). However, some currencies like JPY and KRW have no subunits,
-        so Stripe passes the actual amount. Dividing these by 100 would be wrong:
-        - EUR 1000 (cents) → €10.00 ✓
-        - JPY 1000 (yen)   → ¥1000   ✓ (not ¥10!)
-        """
-        # ISO 4217 zero-decimal currencies (no subunits like cents)
+        """Convert Stripe amount (cents) to Decimal. JPY/KRW etc. have no subunits."""
         zero_decimal_currencies = {'bif', 'clp', 'djf', 'gnf', 'jpy', 'kmf', 'krw',
                                    'mga', 'pyg', 'rwf', 'ugx', 'vnd', 'vuv', 'xaf', 'xof', 'xpf'}
         if currency.lower() in zero_decimal_currencies:

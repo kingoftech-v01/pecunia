@@ -286,11 +286,7 @@ class PlaidProvider(BaseBankProvider):
         if not to_date:
             to_date = date.today()
 
-        # CURSOR-BASED SYNC: We use /transactions/sync instead of /transactions/get
-        # because it's more efficient for incremental updates. The sync endpoint
-        # returns only changes since the last cursor, whereas get requires
-        # re-fetching all transactions. For users with years of history, this
-        # reduces API calls from hundreds to just a few.
+        # Cursor sync returns only changes since last fetch, not full history.
         transactions = []
         cursor = None
         has_more = True
@@ -304,8 +300,7 @@ class PlaidProvider(BaseBankProvider):
 
             response = self._request('/transactions/sync', data)
 
-            # Sync returns 'added', 'modified', and 'removed' arrays.
-            # We only process 'added' here; modifications/deletions handled separately.
+            # Only process 'added'; modifications/deletions handled separately.
             for tx in response.get('added', []):
                 # Filter by account_id if specified
                 if account_id and tx.get('account_id') != account_id:
@@ -316,11 +311,7 @@ class PlaidProvider(BaseBankProvider):
                 if tx_date < from_date or tx_date > to_date:
                     continue
 
-                # PLAID AMOUNT SIGN CONVENTION: Plaid uses positive amounts for
-                # money leaving the account (debits/expenses) and negative for
-                # money entering (credits/income). This is the opposite of bank
-                # statement conventions. We store absolute values and use the
-                # sign only to determine transaction_type.
+                # Plaid: positive = debit, negative = credit (opposite of bank statements).
                 amount = Decimal(str(tx.get('amount', 0)))
 
                 transaction = ProviderTransaction(

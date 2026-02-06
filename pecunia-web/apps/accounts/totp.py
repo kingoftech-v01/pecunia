@@ -145,22 +145,15 @@ class TOTPService:
         current_counter = int(current_time) // cls.INTERVAL
 
         if device:
-            # REPLAY ATTACK PREVENTION: We use a database row lock to ensure that
-            # even if the same valid TOTP code arrives in parallel requests, only
-            # the first one succeeds. The counter comparison MUST happen inside
-            # the lock to prevent race conditions where two requests both pass
-            # the check before either updates the counter.
+            # Row lock prevents replay attacks from parallel requests using the same code.
             with transaction.atomic():
                 locked_device = TOTPDevice.objects.select_for_update().get(pk=device.pk)
 
-                # Reject codes from current or past time windows. TOTP codes are
-                # valid for INTERVAL seconds, so reusing a code within that window
-                # indicates replay attempt or parallel request.
+                # Reject already-used time windows to prevent code reuse.
                 if current_counter <= locked_device.last_used_counter:
                     return False
 
-                # VALID_WINDOW allows ±N time periods to handle clock drift between
-                # server and authenticator app (typically 30-90 seconds tolerance).
+                # valid_window handles clock drift between server and authenticator app.
                 is_valid = totp.verify(code, valid_window=cls.VALID_WINDOW)
 
                 if is_valid:
@@ -170,7 +163,6 @@ class TOTPService:
 
                 return is_valid
         else:
-            # Setup/verification flow without persistent device - no replay protection.
             return totp.verify(code, valid_window=cls.VALID_WINDOW)
 
     @classmethod
