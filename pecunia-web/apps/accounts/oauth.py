@@ -86,6 +86,7 @@ class PKCEManager:
         if not 43 <= length <= 128:
             raise ValueError("Code verifier length must be between 43 and 128")
 
+        # PKCE requires high-entropy verifier; token_bytes provides cryptographic randomness.
         random_bytes = secrets.token_bytes(length)
         return base64.urlsafe_b64encode(random_bytes).decode('utf-8').rstrip('=')[:length]
 
@@ -172,7 +173,7 @@ class OAuthStateManager:
         if state_data is None:
             raise OAuthStateError("Invalid or expired state parameter")
 
-        # Delete state to prevent replay attacks
+        # Delete immediately: single-use prevents replay attacks with stolen state.
         cache.delete(cache_key)
 
         logger.debug(f"Validated OAuth state for provider {state_data.get('provider')}")
@@ -456,7 +457,7 @@ class GoogleOAuth2Provider(BaseOAuth2Provider):
         access_token = tokens.get('access_token')
         id_token = tokens.get('id_token')
 
-        # Try to decode and verify ID token first (faster, no extra request)
+        # ID token contains claims locally; avoids extra API call to userinfo.
         if id_token:
             try:
                 # Fetch Google's public keys for JWT verification
@@ -620,7 +621,7 @@ class AppleOAuth2Provider(BaseOAuth2Provider):
                 headers=headers
             )
 
-            # Cache the secret
+            # Cache to avoid regenerating JWT for every request; 6-month max per Apple.
             AppleOAuth2Provider._client_secret_cache = client_secret
             AppleOAuth2Provider._client_secret_expiry = expiry
 

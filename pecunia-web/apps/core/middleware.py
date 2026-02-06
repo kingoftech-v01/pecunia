@@ -253,7 +253,7 @@ class AuditLogMiddleware(MiddlewareMixin):
     - A09:2021 - Security Logging and Monitoring Failures
     """
 
-    # Sensitive fields to redact from logs
+    # Redact PII/secrets before logging to prevent data leakage in log aggregators.
     SENSITIVE_FIELDS = {
         'password', 'password1', 'password2', 'new_password', 'old_password',
         'token', 'access_token', 'refresh_token', 'api_key', 'secret',
@@ -931,9 +931,8 @@ class RequestSanitizationMiddleware(MiddlewareMixin):
     - A03:2021 - Injection
     """
 
-    # Suspicious patterns (SQL injection, XSS, etc.)
-    # These patterns are designed to avoid false positives on legitimate
-    # financial terms like "FROM account", "SELECT plan", etc.
+    # Patterns require SQL structure (not bare keywords) to avoid false positives
+    # on legitimate terms like "FROM account", "SELECT plan" in financial apps.
     SUSPICIOUS_PATTERNS = [
         # SQL Injection patterns - require SQL-like structure, not bare keywords
         r"(\bSELECT\b\s+[\w\*,\s]+\bFROM\b\s+\w+)",        # SELECT ... FROM table

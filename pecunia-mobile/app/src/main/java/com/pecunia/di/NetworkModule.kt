@@ -116,6 +116,7 @@ object NetworkModule {
         connectionPool: ConnectionPool
     ): OkHttpClient {
         return OkHttpClient.Builder()
+            // Auth first: adds Bearer token before logging sees request.
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
             .addInterceptor { chain ->

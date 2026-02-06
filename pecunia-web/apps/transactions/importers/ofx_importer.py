@@ -67,7 +67,7 @@ class OFXParser:
         Returns:
             Dictionary with account info and transactions
         """
-        # Determine format (SGML or XML)
+        # OFX 1.x uses SGML, 2.x uses XML; check first 100 chars for declaration.
         if '<?xml' in content[:100].lower() or '<?OFX' in content[:100]:
             return self._parse_xml(content)
         else:
@@ -94,7 +94,7 @@ class OFXParser:
 
         OFX SGML uses unclosed tags which need to be closed for XML parsing.
         """
-        # Tags that contain data (not containers)
+        # SGML allows unclosed tags; data_tags need explicit closing for XML parsing.
         data_tags = {
             'TRNTYPE', 'DTPOSTED', 'DTUSER', 'DTAVAIL', 'TRNAMT',
             'FITID', 'CORRECTFITID', 'CORRECTACTION', 'SRVRTID',

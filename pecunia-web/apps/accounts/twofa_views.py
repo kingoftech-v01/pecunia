@@ -54,7 +54,7 @@ class TrustedDeviceManager:
             str: Signed token
         """
         signer = cls._get_signer()
-        # Include user ID and a unique identifier
+        # Include email so token invalidates if user changes email address.
         data = f"{user.pk}:{user.email}"
         return signer.sign(data)
 
@@ -75,7 +75,7 @@ class TrustedDeviceManager:
 
         signer = cls._get_signer()
         try:
-            # max_age in seconds
+            # max_age enforces expiration server-side even if cookie persists.
             data = signer.unsign(token, max_age=TRUSTED_DEVICE_MAX_AGE)
             expected_data = f"{user.pk}:{user.email}"
             return data == expected_data

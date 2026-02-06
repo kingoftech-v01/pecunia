@@ -142,7 +142,7 @@ class TokenStorage:
                         tokens.refresh_token
                     )
 
-                # Save expiry info to file (non-sensitive)
+                # Expiry is non-secret; store in file so we can check without keyring.
                 expiry_data = {
                     'expires_at': tokens.expires_at.isoformat() if tokens.expires_at else None,
                     'token_type': tokens.token_type,
@@ -150,7 +150,7 @@ class TokenStorage:
                 self._save_expiry_data(expiry_data)
 
             else:
-                # Fallback: save to file (less secure)
+                # File fallback for headless/container environments without keyring.
                 self._save_tokens_to_file(tokens)
 
             logger.info("Tokens saved successfully")

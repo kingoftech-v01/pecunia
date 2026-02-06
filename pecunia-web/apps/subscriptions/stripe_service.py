@@ -46,7 +46,7 @@ class StripeService:
             logger.warning("STRIPE_SECRET_KEY not configured in settings")
 
     def _generate_idempotency_key(self, prefix: str = '') -> str:
-        """Generate a unique idempotency key for Stripe requests."""
+        """UUID-based key ensures Stripe deduplicates retried requests within 24h."""
         unique_id = str(uuid.uuid4())
         if prefix:
             return f"{prefix}_{unique_id}"
@@ -242,6 +242,7 @@ class StripeService:
             try:
                 promo = stripe.PromotionCode.list(code=promotion_code, active=True, limit=1, api_key=self.api_key)
                 if promo.data:
+                    # Explicit promo overrides allow_promotion_codes; can't use both.
                     session_params['discounts'] = [{'promotion_code': promo.data[0].id}]
                     session_params.pop('allow_promotion_codes', None)
             except stripe.error.StripeError:

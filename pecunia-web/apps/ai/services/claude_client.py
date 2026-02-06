@@ -76,7 +76,7 @@ class RateLimiter:
                 (ts, count) for ts, count in self.token_counts if ts > minute_ago
             ]
 
-            # Check request limit
+            # Dual limits: requests/min prevents API abuse, tokens/min controls cost.
             while len(self.request_timestamps) >= self.requests_per_minute:
                 wait_time = self.request_timestamps[0] - minute_ago
                 if wait_time > 0:
@@ -106,7 +106,7 @@ class RateLimiter:
             self.token_counts.append((now, estimated_tokens))
 
     def record_actual_tokens(self, tokens: int) -> None:
-        """Update the last token count with actual value."""
+        """Replace estimate with actual tokens after API response arrives."""
         if self.token_counts:
             timestamp, _ = self.token_counts[-1]
             self.token_counts[-1] = (timestamp, tokens)
@@ -200,7 +200,7 @@ Respect user privacy and never ask for sensitive personal information."""
         Raises:
             anthropic.APIError: If all retries fail
         """
-        # Estimate tokens for rate limiting
+        # Rough estimate: ~2 tokens per character; refined after response.
         estimated_tokens = sum(len(m.get('content', '')) for m in messages) * 2
         await self.rate_limiter.acquire(estimated_tokens)
 

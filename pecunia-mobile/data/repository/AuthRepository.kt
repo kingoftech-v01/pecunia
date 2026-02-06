@@ -73,9 +73,9 @@ class AuthRepository @Inject constructor(
             // Try to logout on server
             apiService.logout()
         } catch (e: Exception) {
-            // Ignore server errors during logout
+            // Server unreachable is fine; local logout still succeeds.
         } finally {
-            // Always clear local data
+            // Always clear local tokens even if server fails (offline-first).
             clearAuthData()
         }
         Result.success(Unit)
@@ -95,10 +95,12 @@ class AuthRepository @Inject constructor(
                 saveAuthData(authResponse)
                 Result.success(Unit)
             } else {
+                // Invalid refresh token: force re-login rather than retry loop.
                 clearAuthData()
                 Result.failure(AuthException("Failed to refresh token"))
             }
         } catch (e: Exception) {
+            // Network error during refresh: clear tokens to force re-auth.
             clearAuthData()
             Result.failure(e)
         }

@@ -43,6 +43,7 @@ class SyncManager:
             'sync_fields': ['name', 'color', 'icon', 'parent'],
             'conflict_strategy': 'last_write_wins',
         },
+        # Budgets use server_wins: prevent users from accidentally exceeding limits.
         'budgets.Budget': {
             'model_path': 'apps.budgets.models.Budget',
             'sync_fields': [

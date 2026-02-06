@@ -62,7 +62,7 @@ class BackupCodeService:
     CODE_LENGTH = getattr(settings, 'BACKUP_CODE_LENGTH', 8)
     CODE_COUNT = getattr(settings, 'BACKUP_CODE_COUNT', 10)
     CODE_CHARS = string.ascii_uppercase + string.digits
-    # Exclude ambiguous characters
+    # Exclude 0/O/1/I/L to avoid user confusion when reading codes aloud or handwritten.
     CODE_CHARS = CODE_CHARS.replace('0', '').replace('O', '').replace('I', '').replace('1', '').replace('L', '')
 
     @classmethod

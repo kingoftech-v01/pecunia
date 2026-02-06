@@ -68,7 +68,7 @@ class WebhookIdempotencyManager:
 
     @classmethod
     def get_event_hash(cls, event_data: Dict[str, Any]) -> str:
-        """Generate hash from event data for deduplication."""
+        """Content hash for deduplication; sort_keys ensures consistent ordering."""
         data_str = json.dumps(event_data, sort_keys=True)
         return hashlib.sha256(data_str.encode()).hexdigest()
 

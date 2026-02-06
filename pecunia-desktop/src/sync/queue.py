@@ -389,6 +389,7 @@ class SyncQueue:
         with self._lock:
             key = operation.key
 
+            # Skip if identical operation pending; prevents queue bloat on rapid edits.
             if deduplicate and key in self._pending_keys:
                 self._total_deduplicated += 1
                 logger.debug(f"Deduplicated operation: {key}")
@@ -536,7 +537,7 @@ class SyncQueue:
             )
             return False
 
-        # Calculate exponential backoff
+        # Exponential backoff: 2^n growth capped at max to avoid excessive delays.
         backoff = min(
             self.base_backoff * (2 ** (operation.retry_count - 1)),
             self.max_backoff

@@ -92,7 +92,7 @@ class TokenInfo:
         """Check if the access token is expired."""
         if self.expires_at is None:
             return False
-        # Add 30 second buffer
+        # 30s buffer: trigger refresh before expiry to avoid mid-request failures.
         return datetime.now() >= (self.expires_at - timedelta(seconds=30))
 
     @property

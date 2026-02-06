@@ -92,6 +92,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideMasterKey(@ApplicationContext context: Context): MasterKey {
+        // AES256_GCM provides authenticated encryption; keys stored in Android Keystore.
         return MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
@@ -106,6 +107,7 @@ object AppModule {
         @ApplicationContext context: Context,
         masterKey: MasterKey
     ): SharedPreferences {
+        // SIV for keys (deterministic), GCM for values (nonce-based) - standard practice.
         return EncryptedSharedPreferences.create(
             context,
             PREFS_NAME,

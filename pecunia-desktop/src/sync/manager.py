@@ -381,7 +381,7 @@ class SyncManager(QObject):
                 port = parsed.port or (443 if parsed.scheme == "https" else 80)
                 socket.create_connection((host, port), timeout=3)
             else:
-                # Fallback: try multiple DNS resolvers
+                # Fallback: Cloudflare DNS on port 53; 3s timeout avoids blocking UI.
                 socket.create_connection(("1.1.1.1", 53), timeout=3)
             self._last_connectivity_check = datetime.utcnow()
             self._set_online_status(True)

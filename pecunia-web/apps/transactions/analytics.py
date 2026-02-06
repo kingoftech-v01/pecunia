@@ -54,6 +54,7 @@ class AnalyticsPeriod:
         elif self.period == 'month':
             return self._today.replace(day=1)
         elif self.period == 'quarter':
+            # (month-1)//3 gives quarter index 0-3; *3+1 converts back to month 1,4,7,10.
             quarter_start_month = ((self._today.month - 1) // 3) * 3 + 1
             return self._today.replace(month=quarter_start_month, day=1)
         elif self.period == 'year':

@@ -29,9 +29,9 @@ class AnomalyDetector(BaseAIService):
     using statistical analysis combined with AI reasoning.
     """
 
-    # Detection thresholds
-    AMOUNT_STDDEV_THRESHOLD = 2.5  # Standard deviations for amount anomaly
-    FREQUENCY_THRESHOLD = 3.0  # Times normal frequency for burst detection
+    # 2.5σ = ~0.6% probability in normal distribution; 3x frequency catches bursts.
+    AMOUNT_STDDEV_THRESHOLD = 2.5
+    FREQUENCY_THRESHOLD = 3.0
     DUPLICATE_TIME_WINDOW_HOURS = 72  # Hours to look for duplicates
     DUPLICATE_AMOUNT_TOLERANCE = 0.01  # 1% tolerance for duplicate amounts
 
