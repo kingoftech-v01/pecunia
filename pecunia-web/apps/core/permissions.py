@@ -159,7 +159,13 @@ class BaseSubscriptionPermission(permissions.BasePermission):
         return self.TIER_LEVELS.get(tier, 0)
 
     def has_minimum_tier(self, user, required_tier: str) -> bool:
-        """Check if user has at least the required tier."""
+        """
+        Check if user has at least the required tier.
+
+        Uses numeric levels (free=0, basic=1, premium=2, business=3) to enable
+        "X or higher" checks. For example, a premium feature (level 2) is
+        accessible to premium (2) and business (3) users, but not basic (1).
+        """
         subscription = self.get_subscription_info(user)
 
         if not subscription['is_active']:

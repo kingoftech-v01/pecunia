@@ -48,12 +48,23 @@ class WebhookIdempotencyManager:
 
     @classmethod
     def is_event_processed(cls, event_id: str) -> bool:
-        """Check if event has already been processed."""
+        """
+        Check if event has already been processed using two-tier idempotency.
+
+        Stripe may retry webhook delivery, and our own infrastructure may
+        cause duplicate deliveries. We use both cache (fast) and database
+        (durable) to ensure exactly-once processing:
+
+        1. Cache check: O(1) lookup, handles most retries within 24h
+        2. DB fallback: Catches cases where cache was evicted/restarted
+
+        This prevents double-charging, duplicate email sends, etc.
+        """
         if cache.get(cls.get_cache_key(event_id)) is not None:
             return True
-        # Fallback to database check in case cache was evicted
+        # DB fallback: cache may be cleared on deploy or evicted under memory pressure
         if SubscriptionEvent.objects.filter(stripe_event_id=event_id).exists():
-            cls.mark_event_processed(event_id)
+            cls.mark_event_processed(event_id)  # Re-populate cache
             return True
         return False
 

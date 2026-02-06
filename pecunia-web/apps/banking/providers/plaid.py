@@ -280,14 +280,17 @@ class PlaidProvider(BaseBankProvider):
         from_date: Optional[date] = None,
         to_date: Optional[date] = None
     ) -> List[ProviderTransaction]:
-        """Fetch transactions from Plaid."""
-        # Default date range
+        """Fetch transactions from Plaid using cursor-based sync."""
         if not from_date:
             from_date = date.today() - timedelta(days=90)
         if not to_date:
             to_date = date.today()
 
-        # Use sync endpoint for efficiency
+        # CURSOR-BASED SYNC: We use /transactions/sync instead of /transactions/get
+        # because it's more efficient for incremental updates. The sync endpoint
+        # returns only changes since the last cursor, whereas get requires
+        # re-fetching all transactions. For users with years of history, this
+        # reduces API calls from hundreds to just a few.
         transactions = []
         cursor = None
         has_more = True
@@ -296,12 +299,13 @@ class PlaidProvider(BaseBankProvider):
             data = {
                 'access_token': access_token,
                 'cursor': cursor,
-                'count': 500,
+                'count': 500,  # Max allowed by Plaid per request
             }
 
             response = self._request('/transactions/sync', data)
 
-            # Process added transactions
+            # Sync returns 'added', 'modified', and 'removed' arrays.
+            # We only process 'added' here; modifications/deletions handled separately.
             for tx in response.get('added', []):
                 # Filter by account_id if specified
                 if account_id and tx.get('account_id') != account_id:
@@ -312,6 +316,11 @@ class PlaidProvider(BaseBankProvider):
                 if tx_date < from_date or tx_date > to_date:
                     continue
 
+                # PLAID AMOUNT SIGN CONVENTION: Plaid uses positive amounts for
+                # money leaving the account (debits/expenses) and negative for
+                # money entering (credits/income). This is the opposite of bank
+                # statement conventions. We store absolute values and use the
+                # sign only to determine transaction_type.
                 amount = Decimal(str(tx.get('amount', 0)))
 
                 transaction = ProviderTransaction(

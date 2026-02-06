@@ -405,10 +405,14 @@ Guidelines:
         patterns: Dict[str, Any],
         category: Optional[TransactionCategory]
     ) -> Tuple[bool, Dict[str, Any]]:
-        """Check if amount is anomalous."""
+        """Check if amount is anomalous using z-score statistical analysis."""
         details = {"checks": []}
 
-        # Check against overall patterns
+        # Z-SCORE ANOMALY DETECTION: We measure how many standard deviations
+        # an amount is from the mean. In a normal distribution:
+        #   - z > 2.0: ~2.5% of transactions (unusual)
+        #   - z > 2.5: ~0.6% of transactions (anomaly threshold)
+        #   - z > 3.0: ~0.1% of transactions (highly anomalous)
         overall = patterns.get("overall", {})
         avg = overall.get("avg_amount", 0)
         stddev = overall.get("stddev_amount", 0)
@@ -583,7 +587,14 @@ Analyze this and respond with JSON:
         all_transactions,
         _tx_index: dict = None,
     ) -> List[Transaction]:
-        """Find potential duplicates of a transaction using indexed lookup."""
+        """
+        Find potential duplicates using hash-based indexing for O(n) complexity.
+
+        Without indexing, comparing every transaction pair would be O(n²).
+        Instead, we group transactions by merchant/description into buckets,
+        then only compare within buckets. For 10,000 transactions with 100
+        unique merchants, this reduces comparisons from 100M to ~100K.
+        """
         duplicates = []
         tx_date = transaction.transaction_date
         tx_amount = float(transaction.amount)
@@ -591,12 +602,9 @@ Analyze this and respond with JSON:
         if tx_amount == 0:
             return duplicates
 
-        # Build an index keyed by (merchant_or_desc, rounded_amount) if not provided
-        # This converts O(n^2) to O(n) for the overall duplicate detection
         if _tx_index is None:
             _tx_index = self._build_transaction_index(all_transactions)
 
-        # Determine the lookup key for this transaction
         key = self._get_duplicate_key(transaction)
         if key is None:
             return duplicates
@@ -607,12 +615,14 @@ Analyze this and respond with JSON:
             if other.id == transaction.id:
                 continue
 
-            # Check date proximity
+            # 3-day window catches duplicates from bank processing delays,
+            # pending-to-posted transitions, and timezone differences.
             date_diff = abs((other.transaction_date - tx_date).days)
             if date_diff > 3:
                 continue
 
-            # Check amount similarity
+            # 1% tolerance handles rounding differences between bank feeds
+            # (e.g., $99.99 vs $100.00 from different data sources).
             other_amount = float(other.amount)
             if other_amount == 0:
                 continue

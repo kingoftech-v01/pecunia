@@ -83,16 +83,23 @@ class BaseTokenGenerator:
     def _make_token_with_timestamp(self, user, timestamp: int) -> str:
         """
         Generate the actual token with timestamp.
+
+        Token format: {base36_timestamp}-{truncated_hash}
+        Example: "1a2b3c-8f4e2d1a9b7c5f3e"
         """
         ts_b36 = int_to_base36(timestamp)
         hash_value = self._make_hash_value(user, timestamp)
 
+        # [::2] takes every other character (0, 2, 4, ...) to shorten the token
+        # from 64 to 32 chars. This is safe because: (1) HMAC-SHA256 has uniform
+        # distribution, so every other char retains ~128 bits of entropy, and
+        # (2) these tokens are single-use and short-lived (hours/days).
         hash_string = salted_hmac(
             self.key_salt,
             hash_value,
             secret=self.secret,
             algorithm='sha256'
-        ).hexdigest()[::2]  # Use every other character for shorter token
+        ).hexdigest()[::2]
 
         return f"{ts_b36}-{hash_string}"
 

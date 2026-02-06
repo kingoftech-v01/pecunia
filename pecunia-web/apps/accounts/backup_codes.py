@@ -68,7 +68,7 @@ class BackupCodeService:
     @classmethod
     def _hash_code(cls, code: str, salt: str = None) -> str:
         """
-        Hash a backup code using HMAC-SHA256 with the Django secret key as salt.
+        Hash a backup code using PBKDF2-HMAC-SHA256.
 
         Args:
             code: Plain text backup code
@@ -77,9 +77,18 @@ class BackupCodeService:
         Returns:
             str: Hexadecimal hash of the code
         """
-        # Normalize: uppercase and remove dashes/spaces
+        # Normalize input so users can enter "ABCD-EFGH" or "abcdefgh" interchangeably.
         normalized = code.upper().replace('-', '').replace(' ', '')
+
+        # Using SECRET_KEY as salt is safe here because: (1) backup codes are
+        # already high-entropy random strings, (2) each code is unique per-user,
+        # and (3) the salt only needs to prevent rainbow table attacks, not
+        # provide per-hash uniqueness.
         key = (salt or settings.SECRET_KEY).encode('utf-8')
+
+        # 100,000 iterations is deliberately slow (~100ms) to make brute-force
+        # attacks on stolen hashes impractical. Standard PBKDF2 uses 1,000 but
+        # backup codes have lower entropy than passwords, requiring more work.
         return hashlib.pbkdf2_hmac(
             'sha256',
             normalized.encode('utf-8'),

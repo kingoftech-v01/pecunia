@@ -68,6 +68,11 @@ def update_budget_total_on_item_delete(sender, instance, **kwargs):
 def check_threshold_before_save(sender, instance, **kwargs):
     """
     Store the old spent_amount before save for comparison.
+
+    Django's post_save signal doesn't provide the old field values, only the
+    new ones. To detect if spent_amount actually changed (vs. other fields),
+    we capture the old value in pre_save and attach it to the instance. The
+    post_save handler then compares old vs. new to avoid false threshold alerts.
     """
     if instance.pk:
         try:
