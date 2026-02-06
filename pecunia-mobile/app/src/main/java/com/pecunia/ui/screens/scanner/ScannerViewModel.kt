@@ -41,7 +41,7 @@ class ScannerViewModel @Inject constructor(
         TextRecognizerOptions.DEFAULT_OPTIONS
     )
 
-    // Patterns for data extraction
+    // OCR extraction patterns: receipts vary widely, so we try labeled totals first, then fallback.
     private val amountPattern = Pattern.compile(
         """(?:total|amount|sum|subtotal|grand\s*total)[:\s]*\$?(\d+[.,]\d{2})""",
         Pattern.CASE_INSENSITIVE
@@ -159,13 +159,13 @@ class ScannerViewModel @Inject constructor(
     }
 
     private fun extractTotalAmount(text: String): Double? {
-        // Try to find total amount with keyword
+        // First try labeled total (e.g., "Total: $12.34"); most reliable if present.
         val matcher = amountPattern.matcher(text)
         if (matcher.find()) {
             return parseAmount(matcher.group(1))
         }
 
-        // If no total keyword found, look for the largest amount
+        // Fallback: assume largest amount is the total (works for most receipt layouts).
         val amounts = mutableListOf<Double>()
         val priceMatcher = pricePattern.matcher(text)
         while (priceMatcher.find()) {
@@ -282,15 +282,12 @@ class ScannerViewModel @Inject constructor(
         date: Date?,
         items: List<ReceiptItem>
     ): Float {
+        // Weights reflect field importance for transaction creation:
+        // amount (0.35) > merchant (0.25) > date (0.2) > items (0.2).
         var score = 0f
 
-        // Merchant name found
         if (!merchantName.isNullOrBlank()) score += 0.25f
-
-        // Total amount found
         if (totalAmount != null && totalAmount > 0) score += 0.35f
-
-        // Date found
         if (date != null) score += 0.2f
 
         // Items found

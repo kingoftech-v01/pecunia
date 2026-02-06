@@ -202,6 +202,7 @@ class DashboardViewModel @Inject constructor(
 
     private fun calculateDaysRemaining(endDate: Long?): Int {
         if (endDate == null) return 0
+        // Convert millis to days since epoch for LocalDate; 86400000 = ms per day.
         val end = LocalDate.ofEpochDay(endDate / (24 * 60 * 60 * 1000))
         val today = LocalDate.now()
         return java.time.temporal.ChronoUnit.DAYS.between(today, end).toInt().coerceAtLeast(0)

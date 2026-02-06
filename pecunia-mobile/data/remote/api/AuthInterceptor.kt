@@ -49,9 +49,9 @@ class AuthInterceptor @Inject constructor(
         if (response.code == 401 && !accessToken.isNullOrBlank()) {
             response.close()
 
-            // Try to refresh the token
+            // Double-check locking: prevents thundering herd of concurrent refresh requests.
             synchronized(this) {
-                // Check if another thread already refreshed the token
+                // Another thread may have already refreshed; check before retrying.
                 val currentToken = getAccessToken()
                 if (currentToken != accessToken) {
                     // Token was refreshed by another thread, retry with new token

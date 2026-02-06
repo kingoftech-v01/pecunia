@@ -68,8 +68,9 @@ class ImportRecord:
 
     @property
     def unique_hash(self) -> str:
-        """Generate a unique hash for duplicate detection."""
+        """Hash of date|amount|desc for O(1) duplicate detection during import."""
         if self._hash is None:
+            # Same date+amount+desc = likely duplicate; different merchants with same values are rare.
             hash_str = f"{self.date.isoformat()}|{self.amount}|{self.description}"
             self._hash = hashlib.sha256(hash_str.encode()).hexdigest()
         return self._hash

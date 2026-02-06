@@ -88,6 +88,7 @@ class BankingViewModel @Inject constructor(
                     )
                 )
 
+                // Credit cards are liabilities; negate their balance in net worth calculation.
                 val totalBalance = mockAccounts.sumOf {
                     if (it.accountType == AccountType.CREDIT_CARD) -it.balance else it.balance
                 }

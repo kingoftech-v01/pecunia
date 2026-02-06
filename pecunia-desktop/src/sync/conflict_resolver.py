@@ -351,7 +351,7 @@ class ConflictResolver:
         remote_data: Dict[str, Any]
     ) -> List[str]:
         """Find fields that have different values."""
-        # Fields to ignore in conflict detection
+        # Metadata fields change on every sync; comparing them would flag false conflicts.
         ignore_fields = {
             'sync_version', 'last_synced_at', 'is_dirty',
             'updated_at', 'created_at', 'id', 'remote_id'
@@ -392,8 +392,8 @@ class ConflictResolver:
         remote_updated: Optional[datetime],
         field_conflicts: List[str]
     ) -> ResolutionStrategy:
-        """Suggest a resolution strategy based on conflict details."""
-        # Delete conflicts usually need manual resolution
+        """Suggest resolution strategy: DELETE→manual, few fields→merge, else last-write-wins."""
+        # Delete vs update requires user decision (data loss risk).
         if conflict_type == ConflictType.DELETE_UPDATE:
             return ResolutionStrategy.MANUAL
 

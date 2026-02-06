@@ -522,9 +522,9 @@ class APIClient:
             return False
 
         async with self._refresh_lock:
-            # Check if another coroutine already refreshed
+            # Double-check: another coroutine may have already refreshed the token.
             if self._is_refreshing:
-                # Wait for the other refresh to complete
+                # Brief wait lets the other refresh complete; avoids duplicate requests.
                 await asyncio.sleep(0.1)
                 return True
 

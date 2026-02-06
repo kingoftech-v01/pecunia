@@ -91,6 +91,7 @@ class Converters {
             try {
                 BigDecimal(it)
             } catch (e: NumberFormatException) {
+                // ZERO fallback prevents crashes on corrupt data; logs should catch these cases.
                 BigDecimal.ZERO
             }
         }

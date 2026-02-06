@@ -66,6 +66,8 @@ class TransactionViewModel @Inject constructor(
     }
 
     private fun setupSearchDebounce() {
+        // debounce waits for typing pause; distinctUntilChanged skips duplicate queries;
+        // collectLatest cancels in-flight searches when new query arrives.
         viewModelScope.launch {
             searchQueryFlow
                 .debounce(SEARCH_DEBOUNCE_MS)

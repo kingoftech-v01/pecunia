@@ -305,12 +305,8 @@ class EncryptedFileBackend(CredentialBackend):
         self._encryption_key: Optional[bytes] = None
 
     def _get_machine_key(self) -> bytes:
-        """
-        Generate a machine-specific key for encryption.
-
-        This provides basic protection but is not as secure as a user password.
-        """
-        # Combine various machine identifiers
+        """Generate machine-specific key. Less secure than user password but prevents casual access."""
+        # Machine identifiers tie encrypted data to this device only.
         identifiers = [
             os.environ.get("COMPUTERNAME", ""),
             os.environ.get("USERNAME", ""),
@@ -324,6 +320,7 @@ class EncryptedFileBackend(CredentialBackend):
     def _derive_key(self, salt: bytes) -> bytes:
         """Derive encryption key from machine key."""
         if CRYPTOGRAPHY_AVAILABLE:
+            # PBKDF2 with 100k iterations adds computational cost against brute-force.
             kdf = PBKDF2HMAC(
                 algorithm=hashes.SHA256(),
                 length=ENCRYPTION_KEY_SIZE,
@@ -332,7 +329,7 @@ class EncryptedFileBackend(CredentialBackend):
             )
             return base64.urlsafe_b64encode(kdf.derive(self._get_machine_key()))
         else:
-            # Simple fallback using HMAC
+            # HMAC fallback: weaker than PBKDF2 (no iteration cost). Install cryptography.
             return base64.urlsafe_b64encode(
                 hmac.new(self._get_machine_key(), salt, hashlib.sha256).digest()
             )
