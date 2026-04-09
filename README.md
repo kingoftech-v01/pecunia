@@ -1,7 +1,12 @@
 # Pecunia - Personal Finance Management Platform
 
+[![GitHub issues](https://img.shields.io/github/issues/kingoftech-v01/pecunia)](https://github.com/kingoftech-v01/pecunia/issues)
+[![GitHub stars](https://img.shields.io/github/stars/kingoftech-v01/pecunia)](https://github.com/kingoftech-v01/pecunia/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/kingoftech-v01/pecunia)](https://github.com/kingoftech-v01/pecunia/network)
+[![Contributors](https://img.shields.io/github/contributors/kingoftech-v01/pecunia)](https://github.com/kingoftech-v01/pecunia/graphs/contributors)
+
 **Version**: 1.0.0
-**Last Updated**: 2026-01-29
+**Last Updated**: 2026-04-09
 **Platforms**: Web API, Desktop (Windows/macOS/Linux), Mobile (Android)
 
 ---
@@ -784,20 +789,34 @@ We welcome contributions! Please read our contributing guidelines:
 
 ---
 
-## License
+## Contributing
 
-Copyright (c) 2026 Pecunia. All rights reserved.
+We welcome contributions! Pecunia is an open-source project and we'd love your help.
 
-This software is proprietary and confidential. Unauthorized copying, distribution, or use is strictly prohibited.
+- Read our [Contributing Guide](./CONTRIBUTING.md) to get started
+- Check the [open issues](https://github.com/kingoftech-v01/pecunia/issues) for tasks
+- Look for `good first issue` labels if you're new to the project
+- Please follow our [Code of Conduct](./CODE_OF_CONDUCT.md)
+
+### Areas Where We Need Help
+
+| Area | Platform | Difficulty |
+|------|----------|------------|
+| Offline sync completion | All | Medium-Hard |
+| Receipt scanner with OCR | Mobile | Medium |
+| Dashboard with charts | Desktop | Medium |
+| Budget alerts | Web API | Easy-Medium |
+| Dark mode fixes | Mobile | Easy |
+| Test coverage improvement | All | Easy-Medium |
+| Documentation & API docs | Web API | Easy |
 
 ---
 
 ## Support
 
-- **Documentation**: [docs.pecunia.com](https://docs.pecunia.com)
-- **Issue Tracker**: [GitHub Issues](https://github.com/your-org/pecunia/issues)
-- **Email**: support@pecunia.com
+- **Issue Tracker**: [GitHub Issues](https://github.com/kingoftech-v01/pecunia/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/kingoftech-v01/pecunia/discussions)
 
 ---
 
-*Built with care by the Pecunia Team*
+*Built with care by the Pecunia community*
