@@ -1,10 +1,10 @@
-# FinanceApp Mobile - Android Application
+# Pecunia Mobile - Android Application
 
 Offline-first Android finance application built with Kotlin and Jetpack Compose.
 
 ## Overview
 
-FinanceApp Mobile provides a native Android experience with:
+Pecunia Mobile provides a native Android experience with:
 
 - Clean Architecture with MVVM pattern
 - Offline-first with Room database
@@ -15,9 +15,9 @@ FinanceApp Mobile provides a native Android experience with:
 ## Architecture
 
 ```
-financeapp-mobile/
+pecunia-mobile/
 ├── app/                     # Application module
-│   └── src/main/java/com/financeapp/
+│   └── src/main/java/com/pecunia/
 │       ├── di/             # Hilt dependency injection
 │       └── navigation/     # Navigation components
 ├── domain/                  # Domain layer
@@ -75,7 +75,7 @@ financeapp-mobile/
 Update `NetworkModule.kt` for API base URL:
 
 ```kotlin
-private const val BASE_URL = "https://api.financeapp.com/"
+private const val BASE_URL = "https://api.pecunia.com/"
 ```
 
 ### Build Configuration
@@ -85,7 +85,7 @@ Key configurations in `app/build.gradle.kts`:
 ```kotlin
 android {
     defaultConfig {
-        applicationId = "com.financeapp"
+        applicationId = "com.pecunia"
         minSdk = 26
         targetSdk = 34
     }

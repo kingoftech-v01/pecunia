@@ -1,4 +1,4 @@
-# Scalability Guidelines - FinanceApp
+# Scalability Guidelines - Pecunia
 
 **Version**: 1.0
 **Last Updated**: 2026-01-28
@@ -98,7 +98,7 @@ CREATE INDEX ix_budgets_category ON budgets(category_id);
 #### Django Model Definition
 
 ```python
-# financeapp-web/apps/transactions/models.py
+# pecunia-web/apps/transactions/models.py
 class Transaction(models.Model):
     # ... fields ...
 
@@ -158,7 +158,7 @@ CREATE TABLE transactions_2026_02
 ### Archive Strategy
 
 ```python
-# financeapp-web/apps/transactions/management/commands/archive_old_transactions.py
+# pecunia-web/apps/transactions/management/commands/archive_old_transactions.py
 """
 Archive transactions older than 2 years.
 
@@ -377,7 +377,7 @@ CACHES = {
             'CONNECTION_POOL_KWARGS': {'max_connections': 50},
             'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
         },
-        'KEY_PREFIX': 'financeapp',
+        'KEY_PREFIX': 'pecunia',
         'TIMEOUT': 300,  # 5 minutes default
     },
     'sessions': {
@@ -396,7 +396,7 @@ CACHES = {
 ### Cache Key Patterns
 
 ```python
-# financeapp-web/apps/core/cache_keys.py
+# pecunia-web/apps/core/cache_keys.py
 """
 Centralized cache key patterns.
 
@@ -437,7 +437,7 @@ class CacheKeys:
 ### Cache Invalidation
 
 ```python
-# financeapp-web/apps/transactions/signals.py
+# pecunia-web/apps/transactions/signals.py
 """
 Cache invalidation on model changes.
 """
@@ -479,7 +479,7 @@ def invalidate_transaction_cache(sender, instance, **kwargs):
 ### View-Level Caching
 
 ```python
-# financeapp-web/apps/transactions/views.py
+# pecunia-web/apps/transactions/views.py
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_headers
@@ -506,7 +506,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
 ### Function-Level Caching
 
 ```python
-# financeapp-web/apps/transactions/services.py
+# pecunia-web/apps/transactions/services.py
 from django.core.cache import cache
 from apps.core.cache_keys import CacheKeys
 
@@ -556,7 +556,7 @@ def _calculate_dashboard_summary(user_id: str) -> dict:
 ### Desktop/Mobile Caching
 
 ```python
-# financeapp-desktop/src/services/cache.py
+# pecunia-desktop/src/services/cache.py
 """
 In-memory LRU cache for desktop application.
 """
@@ -659,7 +659,7 @@ GET /api/v1/transactions?page=2&page_size=20
 
 **Django Implementation**:
 ```python
-# financeapp-web/apps/core/pagination.py
+# pecunia-web/apps/core/pagination.py
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
@@ -713,7 +713,7 @@ GET /api/v1/transactions?cursor=eyJpZCI6MTAwfQ&limit=20
 
 **Django Implementation**:
 ```python
-# financeapp-web/apps/core/pagination.py
+# pecunia-web/apps/core/pagination.py
 from rest_framework.pagination import CursorPagination
 
 
@@ -778,7 +778,7 @@ from celery.schedules import crontab
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.production')
 
-app = Celery('financeapp')
+app = Celery('pecunia')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
@@ -820,7 +820,7 @@ app.conf.beat_schedule = {
 ### Task Definition Patterns
 
 ```python
-# financeapp-web/apps/transactions/tasks.py
+# pecunia-web/apps/transactions/tasks.py
 """
 Background tasks for transaction processing.
 """
@@ -895,7 +895,7 @@ def process_recurring_transactions(self):
 ### Desktop Async Patterns
 
 ```python
-# financeapp-desktop/src/services/background.py
+# pecunia-desktop/src/services/background.py
 """
 Background task management for desktop application.
 """
@@ -990,8 +990,8 @@ class BackgroundTaskManager:
 ### Mobile WorkManager
 
 ```kotlin
-// financeapp-mobile/app/src/main/java/com/financeapp/workers/SyncWorker.kt
-package com.financeapp.workers
+// pecunia-mobile/app/src/main/java/com/pecunia/workers/SyncWorker.kt
+package com.pecunia.workers
 
 import android.content.Context
 import androidx.hilt.work.HiltWorker
@@ -1117,7 +1117,7 @@ DATABASES = {
 
 **Desktop (SQLAlchemy)**:
 ```python
-# financeapp-desktop/src/database/connection.py
+# pecunia-desktop/src/database/connection.py
 from sqlalchemy import create_engine
 from sqlalchemy.pool import QueuePool
 from sqlalchemy.orm import sessionmaker, scoped_session
@@ -1159,7 +1159,7 @@ def create_database_engine(db_path: str):
 
 **Desktop (aiohttp)**:
 ```python
-# financeapp-desktop/src/api/client.py
+# pecunia-desktop/src/api/client.py
 import aiohttp
 from contextlib import asynccontextmanager
 
@@ -1209,7 +1209,7 @@ class APIClient:
 
 **Mobile (OkHttp)**:
 ```kotlin
-// financeapp-mobile/di/NetworkModule.kt
+// pecunia-mobile/di/NetworkModule.kt
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
@@ -1255,7 +1255,7 @@ object NetworkModule {
 ### Performance Headers
 
 ```python
-# financeapp-web/apps/core/middleware.py
+# pecunia-web/apps/core/middleware.py
 import time
 
 
@@ -1320,7 +1320,7 @@ REST_FRAMEWORK = {
 ### Logging Best Practices
 
 ```python
-# financeapp-web/apps/core/logging.py
+# pecunia-web/apps/core/logging.py
 import logging
 import time
 from functools import wraps
@@ -1389,12 +1389,12 @@ def log_performance(operation_name: str):
 """
 Load testing with Locust.
 
-Run: locust -f locustfile.py --host=https://api.financeapp.com
+Run: locust -f locustfile.py --host=https://api.pecunia.com
 """
 from locust import HttpUser, task, between
 
 
-class FinanceAppUser(HttpUser):
+class PecuniaUser(HttpUser):
     wait_time = between(1, 3)
 
     def on_start(self):
@@ -1617,7 +1617,7 @@ class DashboardViewModel @Inject constructor(
 
 ---
 
-**This document is MANDATORY for all FinanceApp development.**
+**This document is MANDATORY for all Pecunia development.**
 
 *Last performance review: 2026-01-28*
 *Next scheduled review: 2026-04-28*

@@ -1,4 +1,4 @@
-# Master Conventions - FinanceApp Multi-Platform
+# Master Conventions - Pecunia Multi-Platform
 
 **Version**: 1.0
 **Last Updated**: 2026-01-28
@@ -27,7 +27,7 @@
 
 ### Purpose
 
-This document establishes the foundational conventions for the FinanceApp multi-platform project. All developers MUST adhere to these standards to ensure:
+This document establishes the foundational conventions for the Pecunia multi-platform project. All developers MUST adhere to these standards to ensure:
 
 - **Consistency**: Uniform code style across all platforms
 - **Security**: Standardized security practices
@@ -37,9 +37,9 @@ This document establishes the foundational conventions for the FinanceApp multi-
 ### Scope
 
 These conventions apply to:
-- **financeapp-web**: Django REST API (source of truth)
-- **financeapp-desktop**: Python/PyQt6 desktop application
-- **financeapp-mobile**: Kotlin/Android mobile application
+- **pecunia-web**: Django REST API (source of truth)
+- **pecunia-desktop**: Python/PyQt6 desktop application
+- **pecunia-mobile**: Kotlin/Android mobile application
 
 ### Related Documents
 
@@ -57,7 +57,7 @@ These conventions apply to:
 
 ```
                     +-------------------+
-                    |   FinanceApp API  |
+                    |   Pecunia API  |
                     |   (Django REST)   |
                     |   Source of Truth |
                     +--------+----------+
@@ -87,7 +87,7 @@ These conventions apply to:
 
 ```
 Account Activity Management/
-├── financeapp-web/              # Django REST API
+├── pecunia-web/              # Django REST API
 │   ├── apps/                    # Django applications
 │   │   ├── accounts/            # User management
 │   │   ├── transactions/        # Transaction management
@@ -98,7 +98,7 @@ Account Activity Management/
 │   ├── docker/                  # Container definitions
 │   └── requirements.txt
 │
-├── financeapp-desktop/          # Python desktop app
+├── pecunia-desktop/          # Python desktop app
 │   ├── src/
 │   │   ├── api/                 # API client modules
 │   │   ├── database/            # SQLAlchemy models
@@ -107,7 +107,7 @@ Account Activity Management/
 │   │   └── main.py
 │   └── requirements.txt
 │
-├── financeapp-mobile/           # Android app
+├── pecunia-mobile/           # Android app
 │   ├── app/                     # Application module
 │   ├── data/                    # Data layer
 │   ├── domain/                  # Domain layer
@@ -720,46 +720,46 @@ Standardized error codes for client handling:
 
 ```python
 # Web/Desktop (Python)
-class FinanceAppError(Exception):
+class PecuniaError(Exception):
     """Base exception for all application errors."""
     code: str = "UNKNOWN_ERROR"
     message: str = "An unexpected error occurred"
 
-class ValidationError(FinanceAppError):
+class ValidationError(PecuniaError):
     code = "VALIDATION_ERROR"
 
-class AuthenticationError(FinanceAppError):
+class AuthenticationError(PecuniaError):
     code = "AUTHENTICATION_ERROR"
 
-class PermissionError(FinanceAppError):
+class PermissionError(PecuniaError):
     code = "PERMISSION_DENIED"
 
-class ResourceNotFoundError(FinanceAppError):
+class ResourceNotFoundError(PecuniaError):
     code = "RESOURCE_NOT_FOUND"
 
-class ConflictError(FinanceAppError):
+class ConflictError(PecuniaError):
     code = "CONFLICT"
 
-class RateLimitError(FinanceAppError):
+class RateLimitError(PecuniaError):
     code = "RATE_LIMITED"
 ```
 
 ```kotlin
 // Mobile (Kotlin)
-sealed class FinanceAppError : Exception() {
+sealed class PecuniaError : Exception() {
     abstract val code: String
     abstract override val message: String
 
     data class Validation(
         override val message: String,
         val details: Map<String, List<String>> = emptyMap()
-    ) : FinanceAppError() {
+    ) : PecuniaError() {
         override val code = "VALIDATION_ERROR"
     }
 
     data class Authentication(
         override val message: String = "Authentication required"
-    ) : FinanceAppError() {
+    ) : PecuniaError() {
         override val code = "AUTHENTICATION_ERROR"
     }
 
@@ -953,6 +953,6 @@ Use OpenAPI 3.0 specification for all API endpoints.
 
 ---
 
-**This convention is MANDATORY for all development in FinanceApp.**
+**This convention is MANDATORY for all development in Pecunia.**
 
 *Last reviewed: 2026-01-28*

@@ -1,4 +1,4 @@
-# Mobile Platform Conventions - FinanceApp Kotlin/Android
+# Mobile Platform Conventions - Pecunia Kotlin/Android
 
 **Version**: 1.0
 **Last Updated**: 2026-01-28
@@ -72,11 +72,11 @@
 ### Module Structure
 
 ```
-financeapp-mobile/
+pecunia-mobile/
 ├── app/                           # Application module
 │   ├── src/main/
-│   │   ├── java/com/financeapp/
-│   │   │   ├── FinanceApp.kt     # Application class
+│   │   ├── java/com/pecunia/
+│   │   │   ├── Pecunia.kt     # Application class
 │   │   │   ├── di/               # Hilt modules
 │   │   │   │   ├── AppModule.kt
 │   │   │   │   ├── DatabaseModule.kt
@@ -154,7 +154,7 @@ financeapp-mobile/
 
 | Element | Convention | Example |
 |---------|------------|---------|
-| Packages | lowercase | `com.financeapp.data.repository` |
+| Packages | lowercase | `com.pecunia.data.repository` |
 | Classes | PascalCase | `TransactionRepository` |
 | Functions | camelCase | `getTransactions()` |
 | Variables | camelCase | `transactionList` |
@@ -279,7 +279,7 @@ object DatabaseModule {
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
-            "financeapp.db"
+            "pecunia.db"
         )
             .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .setQueryCallback({ sqlQuery, bindArgs ->
@@ -318,7 +318,7 @@ object DatabaseModule {
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "https://api.financeapp.com/"
+    private const val BASE_URL = "https://api.pecunia.com/"
     private const val CONNECT_TIMEOUT = 10L
     private const val READ_TIMEOUT = 30L
     private const val WRITE_TIMEOUT = 30L
@@ -349,8 +349,8 @@ object NetworkModule {
         // Certificate pinning for production
         if (!BuildConfig.DEBUG) {
             val certificatePinner = CertificatePinner.Builder()
-                .add("api.financeapp.com", "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
-                .add("api.financeapp.com", "sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=")
+                .add("api.pecunia.com", "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+                .add("api.pecunia.com", "sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=")
                 .build()
             builder.certificatePinner(certificatePinner)
         }
@@ -1830,9 +1830,9 @@ fun AppNavGraph(
 
 ```kotlin
 /**
- * FinanceAppException - Base exception for application errors.
+ * PecuniaException - Base exception for application errors.
  */
-sealed class FinanceAppException(
+sealed class PecuniaException(
     override val message: String,
     val code: String
 ) : Exception(message) {
@@ -1842,14 +1842,14 @@ sealed class FinanceAppException(
      */
     data class NetworkException(
         override val message: String = "Network error"
-    ) : FinanceAppException(message, "NETWORK_ERROR")
+    ) : PecuniaException(message, "NETWORK_ERROR")
 
     /**
      * Authentication errors.
      */
     data class AuthException(
         override val message: String = "Authentication failed"
-    ) : FinanceAppException(message, "AUTH_ERROR")
+    ) : PecuniaException(message, "AUTH_ERROR")
 
     /**
      * Validation errors.
@@ -1857,7 +1857,7 @@ sealed class FinanceAppException(
     data class ValidationException(
         override val message: String,
         val field: String? = null
-    ) : FinanceAppException(message, "VALIDATION_ERROR")
+    ) : PecuniaException(message, "VALIDATION_ERROR")
 
     /**
      * Server errors.
@@ -1865,21 +1865,21 @@ sealed class FinanceAppException(
     data class ServerException(
         override val message: String,
         val statusCode: Int
-    ) : FinanceAppException(message, "SERVER_ERROR")
+    ) : PecuniaException(message, "SERVER_ERROR")
 
     /**
      * Database errors.
      */
     data class DatabaseException(
         override val message: String = "Database error"
-    ) : FinanceAppException(message, "DATABASE_ERROR")
+    ) : PecuniaException(message, "DATABASE_ERROR")
 
     /**
      * Sync errors.
      */
     data class SyncException(
         override val message: String = "Sync failed"
-    ) : FinanceAppException(message, "SYNC_ERROR")
+    ) : PecuniaException(message, "SYNC_ERROR")
 }
 
 /**
@@ -1887,12 +1887,12 @@ sealed class FinanceAppException(
  */
 fun Throwable.toUserMessage(): String {
     return when (this) {
-        is FinanceAppException.NetworkException -> "Please check your internet connection"
-        is FinanceAppException.AuthException -> "Please log in again"
-        is FinanceAppException.ValidationException -> message
-        is FinanceAppException.ServerException -> "Server error. Please try again later"
-        is FinanceAppException.DatabaseException -> "Error saving data"
-        is FinanceAppException.SyncException -> "Sync failed. Will retry later"
+        is PecuniaException.NetworkException -> "Please check your internet connection"
+        is PecuniaException.AuthException -> "Please log in again"
+        is PecuniaException.ValidationException -> message
+        is PecuniaException.ServerException -> "Server error. Please try again later"
+        is PecuniaException.DatabaseException -> "Error saving data"
+        is PecuniaException.SyncException -> "Sync failed. Will retry later"
         else -> "An unexpected error occurred"
     }
 }
@@ -2136,7 +2136,7 @@ object SecureLog {
 
     <!-- Production API with certificate pinning -->
     <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">api.financeapp.com</domain>
+        <domain includeSubdomains="true">api.pecunia.com</domain>
         <pin-set expiration="2027-01-01">
             <!-- Primary pin -->
             <pin digest="SHA-256">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</pin>
@@ -2170,11 +2170,11 @@ plugins {
 }
 
 android {
-    namespace = "com.financeapp"
+    namespace = "com.pecunia"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.financeapp"
+        applicationId = "com.pecunia"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
@@ -2295,6 +2295,6 @@ dependencies {
 
 ---
 
-**This document is MANDATORY for all Android development in FinanceApp.**
+**This document is MANDATORY for all Android development in Pecunia.**
 
 *Last reviewed: 2026-01-28*

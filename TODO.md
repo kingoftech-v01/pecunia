@@ -1,6 +1,6 @@
 # Pecunia - Project Roadmap & TODO
 
-**Last Updated**: 2026-01-29
+**Last Updated**: 2026-04-09
 **Status Legend**:
 - `[x]` Completed
 - `[-]` In Progress
@@ -47,12 +47,17 @@
 
 ---
 
-## Current Sprint
+## How to Contribute
 
-**Sprint**: 2026-Q1-S3 (January 27 - February 9)
-**Goal**: Complete offline sync and banking integration beta
+All tasks below are tracked as [GitHub Issues](https://github.com/kingoftech-v01/pecunia/issues). Look for `good first issue` and `help wanted` labels to get started. See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
-### Sprint Tasks
+---
+
+## Current Priorities
+
+**Focus**: Bug fixes, open-source readiness, and community contributions
+
+### Priority Tasks
 
 #### P0 - Critical
 

@@ -1,4 +1,4 @@
-# Security Guidelines - FinanceApp
+# Security Guidelines - Pecunia
 
 **Version**: 1.0
 **Last Updated**: 2026-01-28
@@ -121,8 +121,8 @@ SIMPLE_JWT = {
 
     # Additional Security
     'JTI_CLAIM': 'jti',  # Unique token identifier
-    'AUDIENCE': 'financeapp-api',
-    'ISSUER': 'financeapp',
+    'AUDIENCE': 'pecunia-api',
+    'ISSUER': 'pecunia',
 
     # Sliding tokens (optional)
     'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
@@ -248,7 +248,7 @@ class TOTPManager:
         totp = pyotp.TOTP(secret)
         return totp.provisioning_uri(
             name=email,
-            issuer_name="FinanceApp"
+            issuer_name="Pecunia"
         )
 
     @staticmethod
@@ -280,7 +280,7 @@ class TOTPManager:
 **CORRECT Implementation**:
 
 ```python
-# financeapp-desktop/src/api/token_storage.py
+# pecunia-desktop/src/api/token_storage.py
 """
 Secure token storage using system keyring.
 
@@ -296,7 +296,7 @@ import json
 from pathlib import Path
 import os
 
-SERVICE_NAME = "financeapp"
+SERVICE_NAME = "pecunia"
 KEYRING_ACCESS_TOKEN = "access_token"
 KEYRING_REFRESH_TOKEN = "refresh_token"
 
@@ -327,7 +327,7 @@ class TokenStorage:
 
     def _init_fallback(self):
         """Initialize encrypted file fallback."""
-        self._fallback_dir = Path.home() / '.financeapp' / 'secure'
+        self._fallback_dir = Path.home() / '.pecunia' / 'secure'
         self._fallback_dir.mkdir(parents=True, exist_ok=True)
 
         # Set restrictive permissions (Unix only)
@@ -416,8 +416,8 @@ class TokenStorage:
 **CORRECT Implementation**:
 
 ```kotlin
-// financeapp-mobile/data/local/TokenStorage.kt
-package com.financeapp.data.local
+// pecunia-mobile/data/local/TokenStorage.kt
+package com.pecunia.data.local
 
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -567,7 +567,7 @@ class TokenStorage @Inject constructor(
 **Desktop SQLCipher Implementation**:
 
 ```python
-# financeapp-desktop/src/database/connection.py
+# pecunia-desktop/src/database/connection.py
 """
 Encrypted SQLite database connection using SQLCipher.
 
@@ -622,19 +622,19 @@ def get_encryption_key() -> str:
     3. Hardware security module (production)
     """
     import keyring
-    key = keyring.get_password("financeapp", "db_encryption_key")
+    key = keyring.get_password("pecunia", "db_encryption_key")
     if not key:
         # Generate and store new key
         key = os.urandom(32).hex()
-        keyring.set_password("financeapp", "db_encryption_key", key)
+        keyring.set_password("pecunia", "db_encryption_key", key)
     return key
 ```
 
 **Mobile SQLCipher Implementation**:
 
 ```kotlin
-// financeapp-mobile/data/local/database/AppDatabase.kt
-package com.financeapp.data.local.database
+// pecunia-mobile/data/local/database/AppDatabase.kt
+package com.pecunia.data.local.database
 
 import android.content.Context
 import androidx.room.Database
@@ -653,7 +653,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun budgetDao(): BudgetDao
 
     companion object {
-        private const val DATABASE_NAME = "financeapp.db"
+        private const val DATABASE_NAME = "pecunia.db"
 
         /**
          * Create encrypted Room database.
@@ -684,7 +684,7 @@ abstract class AppDatabase : RoomDatabase() {
 For individual field encryption (bank tokens, etc.):
 
 ```python
-# financeapp-web/apps/banking/encryption.py
+# pecunia-web/apps/banking/encryption.py
 """
 Field-level encryption for sensitive banking data.
 
@@ -773,8 +773,8 @@ class FieldEncryption:
 **Certificate Pinning (Mobile)**:
 
 ```kotlin
-// financeapp-mobile/data/remote/NetworkModule.kt
-package com.financeapp.di
+// pecunia-mobile/data/remote/NetworkModule.kt
+package com.pecunia.di
 
 import dagger.Module
 import dagger.Provides
@@ -800,12 +800,12 @@ object NetworkModule {
         val certificatePinner = CertificatePinner.Builder()
             // Primary certificate pin
             .add(
-                "api.financeapp.com",
+                "api.pecunia.com",
                 "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
             )
             // Backup pin (intermediate CA)
             .add(
-                "api.financeapp.com",
+                "api.pecunia.com",
                 "sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
             )
             .build()
@@ -839,7 +839,7 @@ object NetworkModule {
 ### Django Serializer Validation
 
 ```python
-# financeapp-web/apps/transactions/serializers.py
+# pecunia-web/apps/transactions/serializers.py
 """
 Transaction serializers with comprehensive validation.
 """
@@ -994,7 +994,7 @@ def sanitize_html(html_content: str) -> str:
 - Implement proper permission classes
 
 ```python
-# financeapp-web/apps/transactions/views.py
+# pecunia-web/apps/transactions/views.py
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
@@ -1052,7 +1052,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
 # config/settings/production.py
 DEBUG = False
 
-ALLOWED_HOSTS = ['api.financeapp.com', 'www.financeapp.com']
+ALLOWED_HOSTS = ['api.pecunia.com', 'www.pecunia.com']
 
 # HTTPS enforcement
 SECURE_SSL_REDIRECT = True
@@ -1141,7 +1141,7 @@ REST_FRAMEWORK = {
 ```
 
 ```python
-# financeapp-web/apps/accounts/throttles.py
+# pecunia-web/apps/accounts/throttles.py
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
 
@@ -1232,7 +1232,7 @@ logs/
 ### .env.example Template
 
 ```bash
-# FinanceApp Environment Configuration
+# Pecunia Environment Configuration
 # Copy this file to .env and fill in values
 # NEVER commit .env to version control
 
@@ -1254,7 +1254,7 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 # =============================================================================
 
 # Format: postgres://USER:PASSWORD@HOST:PORT/DATABASE
-DATABASE_URL=postgres://postgres:password@localhost:5432/financeapp
+DATABASE_URL=postgres://postgres:password@localhost:5432/pecunia
 
 # =============================================================================
 # REDIS
@@ -1309,7 +1309,7 @@ EMAIL_HOST_PASSWORD=
 ### Fields to NEVER Log
 
 ```python
-# financeapp-web/apps/core/logging.py
+# pecunia-web/apps/core/logging.py
 """
 Logging configuration with security safeguards.
 
@@ -1399,11 +1399,11 @@ def sanitize_log_data(data: dict) -> dict:
 {
   "timestamp": "2026-01-28T14:30:00.000Z",
   "level": "INFO",
-  "logger": "financeapp.accounts",
+  "logger": "pecunia.accounts",
   "event": "user.login.success",
   "user_id": "550e8400-e29b-41d4-a716-446655440000",
   "ip_address": "192.168.1.100",
-  "user_agent": "FinanceApp Desktop/1.0.0",
+  "user_agent": "Pecunia Desktop/1.0.0",
   "request_id": "abc123-def456",
   "correlation_id": "xyz789",
   "message": "User logged in successfully"
@@ -1437,7 +1437,7 @@ LOGGING = {
         },
     },
     'loggers': {
-        'financeapp.security': {
+        'pecunia.security': {
             'handlers': ['console', 'security'],
             'level': 'INFO',
             'propagate': False,
@@ -1474,7 +1474,7 @@ SECURE_HSTS_PRELOAD = True
 ### Custom Security Headers Middleware
 
 ```python
-# financeapp-web/apps/core/middleware.py
+# pecunia-web/apps/core/middleware.py
 """
 Security headers middleware.
 
@@ -1535,8 +1535,8 @@ class SecurityHeadersMiddleware:
 
 # CORS settings (django-cors-headers)
 CORS_ALLOWED_ORIGINS = [
-    "https://app.financeapp.com",
-    "https://www.financeapp.com",
+    "https://app.pecunia.com",
+    "https://www.pecunia.com",
 ]
 
 # For development only - NEVER in production
@@ -1617,7 +1617,7 @@ CORS_ALLOW_HEADERS = [
 
     <!-- Production API with pinning -->
     <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">api.financeapp.com</domain>
+        <domain includeSubdomains="true">api.pecunia.com</domain>
         <pin-set expiration="2027-01-01">
             <pin digest="SHA-256">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</pin>
             <pin digest="SHA-256">BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=</pin>
@@ -1716,13 +1716,13 @@ CORS_ALLOW_HEADERS = [
 
 | Role | Contact |
 |------|---------|
-| Security Lead | security@financeapp.com |
-| On-Call Engineer | oncall@financeapp.com |
-| Incident Response | incident@financeapp.com |
+| Security Lead | security@pecunia.com |
+| On-Call Engineer | oncall@pecunia.com |
+| Incident Response | incident@pecunia.com |
 
 ---
 
-**This document is MANDATORY for all FinanceApp development.**
+**This document is MANDATORY for all Pecunia development.**
 
 *Last security review: 2026-01-28*
 *Next scheduled review: 2026-04-28*

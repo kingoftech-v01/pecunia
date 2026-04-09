@@ -328,13 +328,11 @@ Account Activity Management/
 │   │       │   ├── navigation/     # Navigation components
 │   │       │   └── theme/          # Material 3 theming
 │   │       │
-│   │       ├── FinanceApp.kt       # Application class
+│   │       ├── PecuniaApp.kt       # Application class
 │   │       └── MainActivity.kt     # Main activity
 │   │
 │   ├── build.gradle.kts            # Gradle build configuration
 │   └── gradle.properties           # Gradle properties
-│
-├── img/                            # Shared image assets
 │
 ├── MASTER_CONVENTIONS.md           # Coding standards & conventions
 ├── SECURITY_GUIDELINES.md          # Security implementation guide
